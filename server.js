@@ -307,11 +307,15 @@ async function endVotingPhase() {
 
   if (!currentRound) return;
 
+  // STEP 1: Randomly select winning color (50/50 chance) BEFORE spinning
+  const winningColor = Math.random() < 0.5 ? "red" : "black";
+  currentRound.winningColor = winningColor;
   currentRound.status = "spinning";
   await currentRound.save();
 
   console.log(`⏰ Voting ended for round ${currentGameState.currentRound}`);
   console.log(`🎰 Spinning the wheel...`);
+  console.log(`🎯 Winning Color: ${winningColor.toUpperCase()} (SELECTED)`);
 
   broadcastGameUpdate();
 
@@ -329,11 +333,10 @@ async function performAutomaticSpin() {
 
   if (!currentRound) return;
 
-  // STEP 1: Randomly select winning color (50/50 chance)
-  const winningColor = Math.random() < 0.5 ? "red" : "black";
-  currentRound.winningColor = winningColor;
+  // Get the winning color that was already set
+  const winningColor = currentRound.winningColor;
 
-  // STEP 2: Get all voters for the winning color
+  // STEP 1: Get all voters for the winning color
   const winningVotes = await Vote.find({
     roundId: currentRound.roundNumber.toString(),
     color: winningColor,
@@ -343,7 +346,7 @@ async function performAutomaticSpin() {
   let eligibleVoters = [];
 
   if (winningVotes.length > 0) {
-    // STEP 3: Randomly select winner from winning color voters only
+    // STEP 2: Randomly select winner from winning color voters only
     const randomIndex = Math.floor(Math.random() * winningVotes.length);
     winner = winningVotes[randomIndex].walletAddress;
     eligibleVoters = winningVotes.map(vote => vote.walletAddress);
@@ -362,7 +365,7 @@ async function performAutomaticSpin() {
   await currentGameState.save();
 
   console.log(`🎰 ROUND ${currentRound.roundNumber} RESULTS:`);
-  console.log(`🎯 Winning Color: ${winningColor.toUpperCase()} (RANDOMLY SELECTED)`);
+  console.log(`🎯 Winning Color: ${winningColor.toUpperCase()} (CONFIRMED)`);
   console.log(`🎲 Eligible Voters: ${eligibleVoters.length} (${winningColor} voters)`);
   console.log(`🏆 Winner: ${winner || "No Winner"}`);
   console.log(
@@ -477,7 +480,8 @@ app.post("/api/verify-wallet", async (req, res) => {
       )}M tokens.`,
     });
 
-    broadcastGameUpdate();
+    // Don't broadcast game update for verification - it doesn't change game state
+    // broadcastGameUpdate();
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
