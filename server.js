@@ -119,6 +119,7 @@ let connectedClients = 0;
 let serverTimeLeft = 0;
 let serverTimerInterval = null;
 let currentPhase = 'verification'; // 'verification', 'voting', 'spinning', 'results'
+let currentPhase = 'voting'; // 'voting', 'spinning', 'results'
 let phaseTimeLeft = 0;
 
 // WebSocket connection handling
@@ -258,7 +259,7 @@ async function initializeGameState() {
     }
 
     await ensureCurrentRound();
-    startVerificationPhase();
+    startVerificationPhase(); // This now starts voting phase directly
   } catch (error) {
     console.log("⚠️ Running in demo mode without database");
     // Create a mock game state for demo
@@ -271,7 +272,7 @@ async function initializeGameState() {
       isActive: true,
       lastUpdated: new Date()
     };
-    startVerificationPhase();
+    startVerificationPhase(); // This now starts voting phase directly
   }
 }
 
@@ -301,43 +302,17 @@ async function ensureCurrentRound() {
 
 // Phase Management Functions
 function startVerificationPhase() {
-  currentPhase = 'verification';
-  phaseTimeLeft = 120; // 2 minutes for verification
+  currentPhase = 'voting';
+  phaseTimeLeft = 300; // 5 minutes for voting (verification can happen anytime)
   
   // Clear existing timers
   if (roundTimer) clearTimeout(roundTimer);
   if (serverTimerInterval) clearInterval(serverTimerInterval);
   
-  console.log(`🔍 VERIFICATION PHASE: ${phaseTimeLeft} seconds`);
-  console.log(`📝 Players can now verify their wallets`);
+  console.log(`🗳️ VOTING PHASE: ${phaseTimeLeft} seconds`);
+  console.log(`📝 Players can verify wallets and vote`);
   
   // Start phase countdown
-  serverTimerInterval = setInterval(() => {
-    phaseTimeLeft = Math.max(0, phaseTimeLeft - 1);
-    
-    // Broadcast update every 10 seconds during verification
-    if (phaseTimeLeft % 10 === 0) {
-      broadcastGameUpdate();
-    }
-    
-    // Move to voting phase when verification time ends
-    if (phaseTimeLeft <= 0) {
-      clearInterval(serverTimerInterval);
-      startVotingPhase();
-    }
-  }, 1000);
-  
-  broadcastGameUpdate();
-}
-
-function startVotingPhase() {
-  currentPhase = 'voting';
-  phaseTimeLeft = 300; // 5 minutes for voting
-  
-  console.log(`🗳️ VOTING PHASE: ${phaseTimeLeft} seconds`);
-  console.log(`🎯 Verified players can now vote RED or BLACK`);
-  
-  // Start voting countdown
   serverTimerInterval = setInterval(() => {
     phaseTimeLeft = Math.max(0, phaseTimeLeft - 1);
     
@@ -464,7 +439,7 @@ async function performAutomaticSpin() {
 
 async function startNextRound() {
   await ensureCurrentRound();
-  startVerificationPhase();
+  startVerificationPhase(); // This now starts voting phase directly
   console.log(`🆕 Round ${currentGameState.currentRound} started!`);
   broadcastGameUpdate();
 }
@@ -526,13 +501,15 @@ app.post("/api/verify-wallet", async (req, res) => {
       success: true,
       balance: tokenBalance,
       isVerified: true,
+      currentPhase: currentPhase,
+      timeLeft: phaseTimeLeft,
       message: `Wallet verified! You have ${Math.floor(
         tokenBalance / 1000000
-      )}M tokens.`,
+      )}M tokens. ${currentPhase === 'voting' ? 'You can now vote!' : 'Wait for next voting phase.'}`,
     });
 
-    // Don't broadcast game update for verification - it doesn't change game state
-    // broadcastGameUpdate();
+    // Broadcast update so UI can show verification status
+    broadcastGameUpdate();
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
