@@ -116,8 +116,10 @@ const GameState = mongoose.model("GameState", gameStateSchema);
 let currentGameState = null;
 let roundTimer = null;
 let connectedClients = 0;
-let serverTimeLeft = 300; // 5 minutes default
+let serverTimeLeft = 0;
 let serverTimerInterval = null;
+let currentPhase = 'verification'; // 'verification', 'voting', 'spinning', 'results'
+let phaseTimeLeft = 0;
 
 // WebSocket connection handling
 io.on("connection", (socket) => {
@@ -146,13 +148,11 @@ async function getCurrentGameData() {
       roundNumber: currentGameState.currentRound,
     }).sort({ _id: -1 });
 
-    // Use server countdown instead of calculating time
-    const timeLeft = serverTimeLeft;
-
     return {
       gameState: {
         currentRound: currentGameState.currentRound,
-        timeLeft: timeLeft,
+        timeLeft: phaseTimeLeft,
+        currentPhase: currentPhase,
         totalPrizesGiven: currentGameState.totalPrizesGiven,
         totalRoundsPlayed: currentGameState.totalRoundsPlayed,
         lastWinner: currentGameState.lastWinner,
@@ -186,12 +186,12 @@ async function getCurrentGameData() {
     };
   } catch (error) {
     // Demo mode fallback
-    const timeLeft = serverTimeLeft;
 
     return {
       gameState: {
         currentRound: currentGameState.currentRound,
-        timeLeft: timeLeft,
+        timeLeft: phaseTimeLeft,
+        currentPhase: currentPhase,
         totalPrizesGiven: currentGameState.totalPrizesGiven,
         totalRoundsPlayed: currentGameState.totalRoundsPlayed,
         lastWinner: currentGameState.lastWinner,
@@ -258,7 +258,7 @@ async function initializeGameState() {
     }
 
     await ensureCurrentRound();
-    startRoundTimer();
+    startVerificationPhase();
   } catch (error) {
     console.log("⚠️ Running in demo mode without database");
     // Create a mock game state for demo
@@ -271,7 +271,7 @@ async function initializeGameState() {
       isActive: true,
       lastUpdated: new Date()
     };
-    startRoundTimer();
+    startVerificationPhase();
   }
 }
 
@@ -291,7 +291,7 @@ async function ensureCurrentRound() {
       });
       await newRound.save();
 
-      console.log(`🎲 NEW ROUND: ${currentGameState.currentRound}`);
+      console.log(`🎲 NEW ROUND: ${currentGameState.currentRound} - VERIFICATION PHASE`);
       broadcastGameUpdate();
     }
   } catch (error) {
@@ -299,7 +299,66 @@ async function ensureCurrentRound() {
   }
 }
 
+// Phase Management Functions
+function startVerificationPhase() {
+  currentPhase = 'verification';
+  phaseTimeLeft = 120; // 2 minutes for verification
+  
+  // Clear existing timers
+  if (roundTimer) clearTimeout(roundTimer);
+  if (serverTimerInterval) clearInterval(serverTimerInterval);
+  
+  console.log(`🔍 VERIFICATION PHASE: ${phaseTimeLeft} seconds`);
+  console.log(`📝 Players can now verify their wallets`);
+  
+  // Start phase countdown
+  serverTimerInterval = setInterval(() => {
+    phaseTimeLeft = Math.max(0, phaseTimeLeft - 1);
+    
+    // Broadcast update every 10 seconds during verification
+    if (phaseTimeLeft % 10 === 0) {
+      broadcastGameUpdate();
+    }
+    
+    // Move to voting phase when verification time ends
+    if (phaseTimeLeft <= 0) {
+      clearInterval(serverTimerInterval);
+      startVotingPhase();
+    }
+  }, 1000);
+  
+  broadcastGameUpdate();
+}
+
+function startVotingPhase() {
+  currentPhase = 'voting';
+  phaseTimeLeft = 300; // 5 minutes for voting
+  
+  console.log(`🗳️ VOTING PHASE: ${phaseTimeLeft} seconds`);
+  console.log(`🎯 Verified players can now vote RED or BLACK`);
+  
+  // Start voting countdown
+  serverTimerInterval = setInterval(() => {
+    phaseTimeLeft = Math.max(0, phaseTimeLeft - 1);
+    
+    // Broadcast update every 5 seconds during voting
+    if (phaseTimeLeft % 5 === 0) {
+      broadcastGameUpdate();
+    }
+    
+    // End voting when time reaches 0
+    if (phaseTimeLeft <= 0) {
+      clearInterval(serverTimerInterval);
+      endVotingPhase();
+    }
+  }, 1000);
+  
+  broadcastGameUpdate();
+}
 async function endVotingPhase() {
+  currentPhase = 'spinning';
+  phaseTimeLeft = 5; // 5 seconds for spinning animation
+  
   const currentRound = await Round.findOne({
     roundNumber: currentGameState.currentRound,
     status: "voting",
@@ -317,15 +376,28 @@ async function endVotingPhase() {
   console.log(`🎰 Spinning the wheel...`);
   console.log(`🎯 Winning Color: ${winningColor.toUpperCase()} (SELECTED)`);
 
+  // Start spinning countdown
+  serverTimerInterval = setInterval(() => {
+    phaseTimeLeft = Math.max(0, phaseTimeLeft - 1);
+    broadcastGameUpdate();
+    
+    if (phaseTimeLeft <= 0) {
+      clearInterval(serverTimerInterval);
+    }
+  }, 1000);
+
   broadcastGameUpdate();
 
-  // Spin for 3 seconds then show result
+  // Spin for 5 seconds then show result
   setTimeout(async () => {
     await performAutomaticSpin();
-  }, 3000);
+  }, 5000);
 }
 
 async function performAutomaticSpin() {
+  currentPhase = 'results';
+  phaseTimeLeft = 10; // 10 seconds to show results
+  
   const currentRound = await Round.findOne({
     roundNumber: currentGameState.currentRound,
     status: "spinning",
@@ -372,50 +444,29 @@ async function performAutomaticSpin() {
     `📊 Total Votes - Red: ${currentRound.votes.red}, Black: ${currentRound.votes.black}`
   );
 
+  // Start results countdown
+  serverTimerInterval = setInterval(() => {
+    phaseTimeLeft = Math.max(0, phaseTimeLeft - 1);
+    broadcastGameUpdate();
+    
+    if (phaseTimeLeft <= 0) {
+      clearInterval(serverTimerInterval);
+    }
+  }, 1000);
+
   broadcastGameUpdate();
 
-  // Start next round after 5 seconds
+  // Start next round after 10 seconds
   setTimeout(async () => {
     await startNextRound();
-  }, 5000);
+  }, 10000);
 }
 
 async function startNextRound() {
   await ensureCurrentRound();
-  startRoundTimer();
+  startVerificationPhase();
   console.log(`🆕 Round ${currentGameState.currentRound} started!`);
   broadcastGameUpdate();
-}
-
-function startRoundTimer() {
-  // Clear existing timers
-  if (roundTimer) {
-    clearTimeout(roundTimer);
-  }
-  if (serverTimerInterval) {
-    clearInterval(serverTimerInterval);
-  }
-
-  // Reset server countdown
-  serverTimeLeft = CONFIG.ROUND_DURATION / 1000; // Convert to seconds
-  
-  // Start server countdown
-  serverTimerInterval = setInterval(() => {
-    serverTimeLeft = Math.max(0, serverTimeLeft - 1);
-    
-    // Broadcast update every 5 seconds
-    if (serverTimeLeft % 5 === 0) {
-      broadcastGameUpdate();
-    }
-    
-    // End voting when time reaches 0
-    if (serverTimeLeft <= 0) {
-      clearInterval(serverTimerInterval);
-      endVotingPhase();
-    }
-  }, 1000);
-
-  console.log(`⏰ Round timer started: ${serverTimeLeft} seconds`);
 }
 
 // API Routes
@@ -492,6 +543,16 @@ app.post("/api/vote", async (req, res) => {
   try {
     const { walletAddress, color } = req.body;
 
+    // Check if we're in voting phase
+    if (currentPhase !== 'voting') {
+      return res.status(400).json({
+        success: false,
+        error: `Voting is not active. Current phase: ${currentPhase}`,
+        currentPhase: currentPhase,
+        timeLeft: phaseTimeLeft
+      });
+    }
+
     if (!walletAddress || !color || !["red", "black"].includes(color)) {
       return res.status(400).json({
         success: false,
@@ -554,10 +615,6 @@ app.post("/api/vote", async (req, res) => {
     }
     await currentRound.save();
 
-    const timeLeft = Math.max(
-      0,
-      Math.floor((currentGameState.nextRoundStartTime - new Date()) / 1000)
-    );
 
     res.json({
       success: true,
@@ -565,7 +622,8 @@ app.post("/api/vote", async (req, res) => {
       voteData: {
         color: color,
         roundNumber: currentGameState.currentRound,
-        timeLeft: timeLeft,
+        timeLeft: phaseTimeLeft,
+        currentPhase: currentPhase,
         votes: currentRound.votes,
         totalVoters: currentRound.participants.length,
       },
@@ -709,6 +767,8 @@ app.get("/api/health", (req, res) => {
     currentRound: currentGameState
       ? currentGameState.currentRound
       : "Not initialized",
+    currentPhase: currentPhase,
+    phaseTimeLeft: phaseTimeLeft,
     connectedClients: connectedClients,
     gameType: "MANUAL_ADMIN_PAYMENTS",
   });
