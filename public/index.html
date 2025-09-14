@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Red or Black Casino</title>
+    <title>Red or Black - Neon Casino</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="config.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
         * {
             margin: 0;
             padding: 0;
@@ -12,725 +16,1710 @@
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            font-family: 'Orbitron', monospace;
+            background: radial-gradient(ellipse at center, #1a0000 0%, #000000 70%);
             color: #fff;
-            min-height: 100vh;
             overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+        /* Animated neon grid background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,0,0,0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,0,0,0.2) 1px, transparent 1px);
+            background-size: 40px 40px;
+            animation: gridGlow 3s ease-in-out infinite alternate;
+            z-index: -2;
         }
 
+        @keyframes gridGlow {
+            0% { opacity: 0.3; background-size: 40px 40px; }
+            100% { opacity: 0.6; background-size: 42px 42px; }
+        }
+
+        /* Floating red particles */
+        .bg-grid::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(2px 2px at 20% 30%, #ff0000, transparent),
+                radial-gradient(2px 2px at 80% 70%, #ff0040, transparent),
+                radial-gradient(1px 1px at 90% 40%, #ff0020, transparent),
+                radial-gradient(1px 1px at 50% 60%, #ff0000, transparent);
+            background-size: 200% 100%;
+            animation: particles 8s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes particles {
+            0%, 100% { transform: translateY(0); opacity: 0.8; }
+            50% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        /* Red neon glow utility */
+        .neon-red {
+            color: #ff0000;
+            text-shadow: 
+                0 0 5px #ff0000,
+                0 0 10px #ff0000,
+                0 0 15px #ff0000,
+                0 0 20px #ff0000,
+                0 0 30px #ff0000;
+        }
+
+        .neon-red-border {
+            border: 2px solid #ff0000;
+            box-shadow: 
+                0 0 10px #ff0000,
+                0 0 20px #ff0000,
+                0 0 30px #ff0000,
+                inset 0 0 10px rgba(255,0,0,0.1);
+        }
+
+        /* Header */
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, #000000 0%, #330000 50%, #000000 100%);
+            border-bottom: 3px solid #ff0000;
+            box-shadow: 0 3px 20px #ff0000;
             position: relative;
         }
 
-        .neon-title {
-            font-size: 3rem;
-            font-weight: bold;
-            text-shadow: 0 0 10px #ff0080, 0 0 20px #ff0080, 0 0 30px #ff0080;
-            animation: neonPulse 2s ease-in-out infinite alternate;
-            margin-bottom: 10px;
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.1), transparent);
+            animation: headerScan 4s linear infinite;
         }
 
-        @keyframes neonPulse {
-            from { text-shadow: 0 0 10px #ff0080, 0 0 20px #ff0080, 0 0 30px #ff0080; }
-            to { text-shadow: 0 0 20px #ff0080, 0 0 30px #ff0080, 0 0 40px #ff0080; }
+        @keyframes headerScan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
 
-        .phase-indicator {
-            display: inline-block;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin: 10px 0;
+        .logo {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #ff4444;
+            text-shadow: 
+                0 0 2px #ff0000,
+                0 0 4px #ff0000;
+            animation: logoFire 2s ease-in-out infinite alternate;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes logoFire {
+            from { 
+                text-shadow: 
+                    0 0 2px #ff0000,
+                    0 0 4px #ff0000;
+            }
+            to { 
+                text-shadow: 
+                    0 0 3px #ff0000,
+                    0 0 6px #ff0000;
+            }
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: #cc0000;
+            letter-spacing: 4px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            animation: phaseGlow 2s ease-in-out infinite alternate;
+            position: relative;
+            z-index: 1;
         }
 
-        .phase-voting {
-            background: linear-gradient(45deg, #00ff00, #32cd32);
-            color: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
-        }
-
-        .phase-spinning {
-            background: linear-gradient(45deg, #ff6600, #ff8c00);
-            color: #fff;
-            box-shadow: 0 0 20px rgba(255, 102, 0, 0.5);
-        }
-
-        .phase-results {
-            background: linear-gradient(45deg, #ff0080, #ff1493);
-            color: #fff;
-            box-shadow: 0 0 20px rgba(255, 0, 128, 0.5);
-        }
-
-        @keyframes phaseGlow {
-            from { transform: scale(1); }
-            to { transform: scale(1.05); }
-        }
-
-        .timer {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #00ffff;
-            text-shadow: 0 0 10px #00ffff;
-            margin: 10px 0;
-        }
-
-        .game-stats {
+        /* Main container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: 1fr 450px;
+            gap: 40px;
+            min-height: calc(100vh - 200px);
         }
 
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 15px;
-            padding: 20px;
+        /* Game area */
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* Timer section */
+        .timer-section {
+            background: linear-gradient(135deg, #000000, #1a0000, #000000);
+            border: 3px solid #ff0000;
+            border-radius: 25px;
+            padding: 50px;
             text-align: center;
-            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 0 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.1);
         }
 
-        .stat-value {
+        .timer-section::before {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
+            background: conic-gradient(transparent, rgba(255,0,0,0.3), transparent, rgba(255,0,0,0.1));
+            animation: timerRotate 4s linear infinite;
+        }
+
+        @keyframes timerRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .timer-display {
+            font-size: 8rem;
+            font-weight: 900;
+            color: #ff4444;
+            text-shadow: 
+                0 0 3px #ff0000,
+                0 0 6px #ff0000;
+            position: relative;
+            z-index: 1;
+            animation: timerPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes timerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .round-info {
             font-size: 2rem;
-            font-weight: bold;
-            color: #00ffff;
-            text-shadow: 0 0 10px #00ffff;
+            margin-top: 20px;
+            color: #ff0000;
+            text-shadow: 0 0 15px #ff0000;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
         }
 
-        .stat-label {
-            font-size: 0.9rem;
-            color: #ccc;
-            margin-top: 5px;
+        .status {
+            font-size: 2.2rem;
+            margin-top: 15px;
+            font-weight: 900;
+            position: relative;
+            z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
-        .verification-section {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(0, 255, 255, 0.3);
+        /* Voting section */
+        .voting-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .vote-button {
+            padding: 80px 50px;
+            border: 4px solid;
+            border-radius: 25px;
+            font-family: 'Orbitron', monospace;
+            font-size: 3.5rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        .vote-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .vote-button:hover::before {
+            left: 100%;
+        }
+
+        .red-button {
+            background: linear-gradient(135deg, #ff0000, #cc0000, #ff0000);
+            color: #fff;
+            border-color: #ff0000;
+            box-shadow: 
+                0 0 30px #ff0000,
+                0 0 60px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.2);
+        }
+
+        .red-button:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 60px #ff0000,
+                0 0 80px #ff0000,
+                inset 0 0 40px rgba(255,0,0,0.3);
+        }
+
+        .red-button:active {
+            transform: translateY(-4px) scale(0.98);
+        }
+
+        .black-button {
+            background: linear-gradient(135deg, #000000, #1a0000, #000000);
+            color: #ff0000;
+            border-color: #ff0000;
+            box-shadow: 
+                0 0 30px #ff0000,
+                0 0 60px rgba(255,0,0,0.5),
+                inset 0 0 30px rgba(255,0,0,0.1);
+        }
+
+        .black-button:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 60px #ff0000,
+                0 0 80px #ff0000,
+                inset 0 0 40px rgba(255,0,0,0.2);
+            color: #fff;
+            background: linear-gradient(135deg, #1a0000, #330000, #1a0000);
+        }
+
+        .black-button:active {
+            transform: translateY(-4px) scale(0.98);
+        }
+
+        .vote-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            filter: grayscale(50%);
+        }
+
+        /* Vote counts */
+        .vote-counts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .vote-count {
+            background: linear-gradient(135deg, #000000, #1a0000);
+            border: 3px solid #ff0000;
             border-radius: 20px;
             padding: 30px;
-            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 
+                0 0 25px #ff0000,
+                inset 0 0 25px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vote-count::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.2), transparent);
+            animation: countScan 3s ease-in-out infinite;
+        }
+
+        @keyframes countScan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .count-number {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 15px;
+            color: #ff0000;
+            text-shadow: 
+                0 0 15px #ff0000,
+                0 0 30px #ff0000;
+            position: relative;
+            z-index: 1;
+        }
+
+        .count-label {
+            font-size: 1.4rem;
+            color: #cc0000;
+            font-weight: 700;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Random selector box overlay */
+        .selector-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
             backdrop-filter: blur(10px);
         }
-
-        .verification-title {
-            font-size: 1.5rem;
-            color: #00ffff;
+        
+        .selector-overlay-content {
+            position: relative;
             text-align: center;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px #00ffff;
         }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .wallet-input {
-            flex: 1;
-            padding: 15px;
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 10px;
-            background: rgba(0, 0, 0, 0.3);
+        
+        .close-selector-btn {
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 3px solid #ff0000;
             color: #fff;
-            font-size: 1rem;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10000;
+            box-shadow: 0 0 20px #ff0000;
             transition: all 0.3s ease;
         }
-
-        .wallet-input:focus {
-            outline: none;
-            border-color: #00ffff;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        
+        .close-selector-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px #ff0000;
+        }
+        
+        .selector-info {
+            margin-top: 30px;
+            color: #fff;
+        }
+        
+        .selector-info h3 {
+            font-size: 2rem;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            margin-bottom: 10px;
+        }
+        
+        .selector-info p {
+            font-size: 1.2rem;
+            color: #cc0000;
+            text-shadow: 0 0 10px #ff0000;
         }
 
-        .btn {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
+        .selector-box {
+            width: 500px;
+            height: 400px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #000000, #1a0000, #000000);
+            position: relative;
+            border: 4px solid #ff0000;
+            box-shadow: 
+                0 0 50px #ff0000,
+                0 0 100px #ff0000,
+                0 0 150px rgba(255,0,0,0.8),
+                0 0 200px rgba(255,0,0,0.6),
+                inset 0 0 80px rgba(255,0,0,0.3),
+                inset 0 0 40px rgba(255,255,255,0.1);
+            animation: selectorGlow 3s ease-in-out infinite alternate;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        @keyframes selectorGlow {
+            from { 
+                box-shadow: 
+                    0 0 50px #ff0000,
+                    0 0 100px #ff0000,
+                    0 0 150px rgba(255,0,0,0.8),
+                    0 0 200px rgba(255,0,0,0.6),
+                    inset 0 0 80px rgba(255,0,0,0.3),
+                    inset 0 0 40px rgba(255,255,255,0.1);
+            }
+            to { 
+                box-shadow: 
+                    0 0 80px #ff0000,
+                    0 0 150px #ff0000,
+                    0 0 200px rgba(255,0,0,0.9),
+                    0 0 250px rgba(255,0,0,0.7),
+                    inset 0 0 100px rgba(255,0,0,0.4),
+                    inset 0 0 60px rgba(255,255,255,0.2);
+            }
+        }
+
+        .selector-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .selector-header h3 {
+            font-size: 1.8rem;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            margin-bottom: 10px;
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+
+        .selector-subtitle {
             font-size: 1rem;
-            font-weight: bold;
+            color: #cc0000;
+            text-shadow: 0 0 10px #ff0000;
+            animation: pulse 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.7; }
+            to { opacity: 1; }
+        }
+
+        .selector-display {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .id-display {
+            text-align: center;
+            padding: 20px;
+            border: 2px solid #ff0000;
+            border-radius: 15px;
+            background: rgba(255,0,0,0.1);
+            box-shadow: 0 0 30px rgba(255,0,0,0.3);
+            min-width: 300px;
+        }
+
+        .current-id {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 15px #ff0000;
+            letter-spacing: 1px;
+            font-family: 'Courier New', monospace;
+            display: block;
+            margin-bottom: 10px;
+            min-height: 2rem;
+            line-height: 2rem;
+        }
+
+        .id-label {
+            font-size: 0.9rem;
+            color: #cc0000;
+            text-shadow: 0 0 10px #ff0000;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .selector-progress {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,0,0,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff0000, #ff4444);
+            border-radius: 3px;
+            box-shadow: 0 0 10px #ff0000;
+            animation: progressFill 3s ease-out forwards;
+        }
+
+        @keyframes progressFill {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+
+
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(135deg, #000000, #1a0000, #000000);
+            border: 3px solid #ff0000;
+            border-radius: 25px;
+            padding: 30px;
+            height: fit-content;
+            box-shadow: 
+                0 0 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ff0000, transparent);
+            animation: sidebarScan 2s ease-in-out infinite;
+        }
+
+        @keyframes sidebarScan {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .sidebar-section {
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sidebar-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ff0000;
+            text-shadow: 0 0 15px #ff0000;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Wallet section */
+        .wallet-section input {
+            width: 100%;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #000000, #1a0000);
+            border: 2px solid #ff0000;
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            box-shadow: 
+                0 0 15px rgba(255,0,0,0.3),
+                inset 0 0 15px rgba(255,0,0,0.1);
+        }
+
+        .wallet-section input::placeholder {
+            color: #cc0000;
+        }
+
+        .wallet-section input:focus {
+            outline: none;
+            box-shadow: 
+                0 0 25px #ff0000,
+                inset 0 0 25px rgba(255,0,0,0.2);
+        }
+
+        .verify-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff0000, #cc0000, #ff0000);
+            border: 3px solid #ff0000;
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 18px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
+            box-shadow: 
+                0 0 20px #ff0000,
+                inset 0 0 20px rgba(255,0,0,0.2);
         }
 
-        .btn-verify {
-            background: linear-gradient(45deg, #00ffff, #0080ff);
-            color: #000;
+        .verify-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 10px 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.3);
         }
 
-        .btn-verify:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 255, 255, 0.3);
+        /* Voters list */
+        .voters-list {
+            max-height: 350px;
+            overflow-y: auto;
+            padding-right: 10px;
         }
 
-        .btn-verify:disabled {
-            background: #666;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .verification-status {
-            text-align: center;
+        .voter-item {
+            background: linear-gradient(135deg, #000000, #1a0000);
+            margin-bottom: 15px;
             padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-
-        .status-success {
-            background: rgba(0, 255, 0, 0.2);
-            border: 1px solid #00ff00;
-            color: #00ff00;
-        }
-
-        .status-error {
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid #ff0000;
-            color: #ff0000;
-        }
-
-        .status-info {
-            background: rgba(0, 255, 255, 0.2);
-            border: 1px solid #00ffff;
-            color: #00ffff;
-        }
-
-        .voting-section {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 0, 128, 0.3);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-        }
-
-        .voting-title {
-            font-size: 1.5rem;
-            color: #ff0080;
-            text-align: center;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px #ff0080;
-        }
-
-        .vote-buttons {
+            border-radius: 12px;
+            border: 2px solid #ff0000;
+            font-size: 14px;
             display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 
+                0 0 10px rgba(255,0,0,0.3),
+                inset 0 0 10px rgba(255,0,0,0.1);
+            transition: all 0.3s ease;
+            min-height: 50px;
+            gap: 10px;
         }
 
-        .btn-vote {
-            padding: 20px 40px;
+        .voter-item:hover {
+            transform: translateX(5px);
+            box-shadow: 
+                0 0 20px rgba(255,0,0,0.5),
+                inset 0 0 20px rgba(255,0,0,0.2);
+        }
+
+        .voter-address {
+            font-family: monospace;
+            color: #fff;
+            text-shadow: 0 0 5px #ff0000;
+            flex: 1;
+            min-width: 0;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: calc(100% - 80px);
+        }
+
+        .voter-vote {
+            font-weight: 900;
+            font-size: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            border: 1px solid #ff0000;
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .voter-vote.red {
+            background: #ff0000;
+            color: #fff;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .voter-vote.black {
+            background: #000000;
+            color: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        /* Stats section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .expanded-winner {
+            grid-column: 1 / -1;
+            min-height: 80px;
+            padding: 25px;
+            background: linear-gradient(135deg, #1a0000, #330000, #1a0000);
+            border: 3px solid #ff0000;
+            box-shadow: 
+                0 0 30px #ff0000,
+                0 0 60px rgba(255,0,0,0.3),
+                inset 0 0 30px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .expanded-winner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.2), transparent);
+            animation: winnerScan 3s ease-in-out infinite;
+        }
+        
+        @keyframes winnerScan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .expanded-winner .stat-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ff0000;
+            text-shadow: 
+                0 0 20px #ff0000,
+                0 0 40px #ff0000;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .expanded-winner .stat-label {
             font-size: 1.2rem;
+            color: #cc0000;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .winner-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .winner-info {
+            flex: 1;
+        }
+        
+        .copy-winner-btn {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 2px solid #ff0000;
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 0 15px rgba(255,0,0,0.3),
+                inset 0 0 15px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            min-width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .copy-winner-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 
+                0 8px 25px rgba(255,0,0,0.5),
+                0 0 30px rgba(255,0,0,0.4),
+                inset 0 0 20px rgba(255,0,0,0.2);
+            background: linear-gradient(135deg, #ff3333, #ff0000);
+        }
+        
+        .copy-winner-btn:active {
+            transform: translateY(0) scale(0.95);
+        }
+        
+        .copy-winner-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+        
+        .copy-winner-btn:hover::before {
+            left: 100%;
+        }
+        
+        .copy-winner-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #000000, #1a0000);
+            padding: 20px;
             border-radius: 15px;
-            min-width: 150px;
+            text-align: center;
+            border: 2px solid #ff0000;
+            box-shadow: 
+                0 0 15px rgba(255,0,0,0.3),
+                inset 0 0 15px rgba(255,0,0,0.1);
             transition: all 0.3s ease;
         }
 
-        .btn-red {
-            background: linear-gradient(45deg, #ff0000, #ff4444);
-            color: #fff;
+        .stat-item:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                0 0 25px rgba(255,0,0,0.5),
+                inset 0 0 25px rgba(255,0,0,0.2);
         }
 
-        .btn-red:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(255, 0, 0, 0.4);
-        }
-
-        .btn-black {
-            background: linear-gradient(45deg, #000000, #333333);
-            color: #fff;
-            border: 2px solid #666;
-        }
-
-        .btn-black:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
-        }
-
-        .btn-vote:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .vote-counts {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-        }
-
-        .vote-count {
-            text-align: center;
-            padding: 15px;
-            border-radius: 10px;
-            min-width: 120px;
-        }
-
-        .vote-count-red {
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid #ff0000;
-        }
-
-        .vote-count-black {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #666;
-        }
-
-        .count-number {
+        .stat-value {
             font-size: 2rem;
-            font-weight: bold;
-            color: #fff;
+            font-weight: 900;
+            color: #ff0000;
+            display: block;
+            text-shadow: 0 0 15px #ff0000;
+            margin-bottom: 8px;
         }
 
-        .count-label {
+        .stat-label {
             font-size: 0.9rem;
-            color: #ccc;
-            margin-top: 5px;
-        }
-
-        .results-section {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-            text-align: center;
-        }
-
-        .results-title {
-            font-size: 1.5rem;
-            color: #ffd700;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px #ffd700;
-        }
-
-        .winning-color {
-            font-size: 3rem;
-            font-weight: bold;
-            margin: 20px 0;
+            color: #cc0000;
+            font-weight: 700;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Pool announcement */
+        .pool-announcement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #000000, #330000, #000000);
+            border: 5px solid #ff0000;
+            border-radius: 30px;
+            padding: 60px;
+            text-align: center;
+            z-index: 1001;
+            display: none;
+            box-shadow: 
+                0 0 100px #ff0000,
+                0 0 200px rgba(255,0,0,0.5),
+                inset 0 0 50px rgba(255,0,0,0.2);
+            animation: poolAnnouncementGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes poolAnnouncementGlow {
+            from { 
+                box-shadow: 0 0 100px #ff0000, 0 0 200px rgba(255,0,0,0.5), inset 0 0 50px rgba(255,0,0,0.2);
+                transform: translate(-50%, -50%) scale(1);
+            }
+            to { 
+                box-shadow: 0 0 120px #ff0000, 0 0 240px rgba(255,0,0,0.7), inset 0 0 60px rgba(255,0,0,0.3);
+                transform: translate(-50%, -50%) scale(1.02);
+            }
+        }
+
+        .pool-announcement.red {
+            border-color: #ff0000;
+            box-shadow: 
+                0 0 100px #ff0000,
+                0 0 200px rgba(255,0,0,0.5),
+                inset 0 0 50px rgba(255,0,0,0.2);
+        }
+
+        .pool-announcement.black {
+            border-color: #ff0000;
+            box-shadow: 
+                0 0 100px #ff0000,
+                0 0 200px rgba(0,0,0,0.5),
+                inset 0 0 50px rgba(0,0,0,0.2);
+        }
+
+        .pool-text {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 
+                0 0 20px currentColor,
+                0 0 40px currentColor;
+        }
+
+        .pool-text.red {
+            color: #ff0000;
+        }
+
+        .pool-text.black {
+            color: #ffffff;
+            text-shadow: 
+                0 0 20px #ffffff,
+                0 0 40px #ffffff,
+                0 0 60px #ff0000;
+        }
+
+        .pool-subtitle {
+            font-size: 1.8rem;
+            color: #cc0000;
+            text-shadow: 0 0 15px #ff0000;
+            margin-bottom: 20px;
+        }
+
+        .pool-count {
+            font-size: 1.4rem;
+            color: #fff;
+            text-shadow: 0 0 10px #ff0000;
+            margin-bottom: 30px;
+        }
+
+        .continue-btn {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 3px solid #ff0000;
+            padding: 20px 40px;
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 18px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 
+                0 0 20px #ff0000,
+                inset 0 0 20px rgba(255,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .continue-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                0 0 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.3);
+        }
+
+        /* Winner announcement */
+        .winner-announcement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #000000, #330000, #000000);
+            border: 5px solid #ff0000;
+            border-radius: 30px;
+            padding: 60px;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+            box-shadow: 
+                0 0 100px #ff0000,
+                0 0 200px rgba(255,0,0,0.5),
+                inset 0 0 50px rgba(255,0,0,0.2);
             animation: winnerGlow 1s ease-in-out infinite alternate;
         }
 
-        .winning-red {
-            color: #ff0000;
-            text-shadow: 0 0 20px #ff0000;
-        }
-
-        .winning-black {
-            color: #fff;
-            text-shadow: 0 0 20px #666;
-        }
-
         @keyframes winnerGlow {
-            from { transform: scale(1); }
-            to { transform: scale(1.1); }
+            from { box-shadow: 0 0 100px #ff0000, 0 0 200px rgba(255,0,0,0.5), inset 0 0 50px rgba(255,0,0,0.2); }
+            to { box-shadow: 0 0 120px #ff0000, 0 0 240px rgba(255,0,0,0.7), inset 0 0 60px rgba(255,0,0,0.3); }
         }
 
-        .winner-info {
-            background: rgba(255, 215, 0, 0.2);
-            border: 1px solid #ffd700;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
+        .winner-text {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 30px;
+            color: #ff0000;
+            text-shadow: 
+                0 0 20px #ff0000,
+                0 0 40px #ff0000;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
         .winner-address {
             font-family: monospace;
-            font-size: 0.9rem;
-            color: #ffd700;
+            font-size: 1.2rem;
+            color: #fff;
+            text-shadow: 0 0 15px #ff0000;
+            margin-bottom: 30px;
             word-break: break-all;
+            background: rgba(255,0,0,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ff0000;
         }
 
+        .close-winner {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 3px solid #ff0000;
+            padding: 20px 40px;
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 18px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 
+                0 0 20px #ff0000,
+                inset 0 0 20px rgba(255,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .close-winner:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                0 0 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.3);
+        }
+
+        /* Connection status */
         .connection-status {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: bold;
+            top: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 900;
+            z-index: 100;
+            border: 2px solid;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .status-connected {
-            background: rgba(0, 255, 0, 0.2);
-            border: 1px solid #00ff00;
-            color: #00ff00;
-        }
-
-        .status-disconnected {
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid #ff0000;
+        .connected {
+            background: linear-gradient(135deg, #000000, #1a0000);
             color: #ff0000;
+            border-color: #ff0000;
+            box-shadow: 0 0 20px #ff0000;
         }
 
-        .spinning-wheel {
-            width: 200px;
-            height: 200px;
-            border: 10px solid #333;
-            border-radius: 50%;
-            margin: 20px auto;
-            position: relative;
-            background: conic-gradient(#ff0000 0deg 180deg, #000000 180deg 360deg);
+        .disconnected {
+            background: linear-gradient(135deg, #330000, #660000);
+            color: #fff;
+            border-color: #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+            animation: disconnectedBlink 1s ease-in-out infinite;
         }
 
-        .spinning {
-            animation: spin 2s linear infinite;
+        @keyframes disconnectedBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 12px;
         }
 
-        .wheel-pointer {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 30px solid #ffd700;
+        ::-webkit-scrollbar-track {
+            background: #000000;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border-radius: 6px;
+            border: 2px solid #000000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            box-shadow: 0 0 20px #ff0000;
+        }
+
+        /* Pulse animation */
+        .pulse {
+            animation: pulseRed 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseRed {
+            0%, 100% { 
+                text-shadow: 
+                    0 0 10px #ff0000,
+                    0 0 20px #ff0000,
+                    0 0 30px #ff0000;
+            }
+            50% { 
+                text-shadow: 
+                    0 0 20px #ff0000,
+                    0 0 30px #ff0000,
+                    0 0 40px #ff0000,
+                    0 0 50px #ff0000;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
         }
 
         @media (max-width: 768px) {
-            .neon-title {
-                font-size: 2rem;
+            .logo {
+                font-size: 3rem;
             }
             
-            .vote-buttons {
-                flex-direction: column;
-                align-items: center;
+            .timer-display {
+                font-size: 5rem;
             }
             
-            .btn-vote {
-                width: 100%;
-                max-width: 200px;
+            .vote-button {
+                padding: 50px 30px;
+                font-size: 2.5rem;
             }
             
-            .input-group {
-                flex-direction: column;
+            .voting-section {
+                grid-template-columns: 1fr;
             }
+
+            .container {
+                padding: 20px;
+                gap: 20px;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            animation: loadingGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes loadingGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="connection-status" id="connectionStatus">
-        🔴 Disconnected
-    </div>
+    <div class="bg-grid"></div>
+    
+    <div class="connection-status" id="connectionStatus">CONNECTING...</div>
+
+    <header class="header">
+        <h1 class="logo">RED OR BLACK</h1>
+        <p class="subtitle">Ultimate Neon Casino • Live Gambling • High Stakes</p>
+    </header>
 
     <div class="container">
-        <div class="header">
-            <h1 class="neon-title">🎰 RED OR BLACK CASINO</h1>
-            <div class="phase-indicator" id="phaseIndicator">
-                🔍 Loading...
+        <div class="game-area">
+            <!-- Timer Section -->
+            <div class="timer-section">
+                <div class="timer-display" id="timer">00:00</div>
+                <div class="round-info">
+                    Round <span id="currentRound">1</span>
+                </div>
+                <div class="status neon-red" id="gameStatus">LOADING...</div>
             </div>
-            <div class="timer" id="timer">--:--</div>
-        </div>
 
-        <div class="game-stats">
-            <div class="stat-card">
-                <div class="stat-value" id="currentRound">-</div>
-                <div class="stat-label">Current Round</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalParticipants">-</div>
-                <div class="stat-label">Total Participants</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalRounds">-</div>
-                <div class="stat-label">Rounds Played</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalPrizes">-</div>
-                <div class="stat-label">Total Prizes Given</div>
-            </div>
-        </div>
-
-        <!-- Verification Section (Always Available) -->
-        <div class="verification-section">
-            <h2 class="verification-title">🔐 Wallet Verification</h2>
-            <p style="text-align: center; color: #ccc; margin-bottom: 20px;">
-                Verify your wallet anytime to participate in voting
-            </p>
-            <div class="input-group">
-                <input 
-                    type="text" 
-                    id="walletInput" 
-                    class="wallet-input" 
-                    placeholder="Enter your Solana wallet address..."
-                >
-                <button id="verifyBtn" class="btn btn-verify">
-                    🔍 Verify Wallet
+            <!-- Voting Section -->
+            <div class="voting-section" id="votingSection">
+                <button class="vote-button red-button" id="redButton" onclick="vote('red')" disabled>
+                    RED
                 </button>
-            </div>
-            <div id="verificationStatus" class="verification-status" style="display: none;"></div>
-        </div>
-
-        <!-- Voting Section -->
-        <div class="voting-section" id="votingSection">
-            <h2 class="voting-title">🗳️ Cast Your Vote</h2>
-            <div id="votingMessage" style="text-align: center; color: #ccc; margin-bottom: 20px;">
-                Verify your wallet first to vote
-            </div>
-            
-            <div class="vote-buttons">
-                <button id="voteRedBtn" class="btn btn-vote btn-red" disabled>
-                    🔴 RED
-                </button>
-                <button id="voteBlackBtn" class="btn btn-vote btn-black" disabled>
-                    ⚫ BLACK
+                <button class="vote-button black-button" id="blackButton" onclick="vote('black')" disabled>
+                    BLACK
                 </button>
             </div>
 
+            <!-- Vote Counts -->
             <div class="vote-counts">
-                <div class="vote-count vote-count-red">
-                    <div class="count-number" id="redVotes">0</div>
-                    <div class="count-label">Red Votes</div>
+                <div class="vote-count">
+                    <div class="count-number" id="redCount">0</div>
+                    <div class="count-label">RED VOTES</div>
                 </div>
-                <div class="vote-count vote-count-black">
-                    <div class="count-number" id="blackVotes">0</div>
-                    <div class="count-label">Black Votes</div>
+                <div class="vote-count">
+                    <div class="count-number" id="blackCount">0</div>
+                    <div class="count-label">BLACK VOTES</div>
+                </div>
+            </div>
+
+            <!-- Random Selector Box Overlay -->
+            <div class="selector-container" id="selectorContainer">
+                <div class="selector-overlay-content">
+                    <button class="close-selector-btn" id="closeSelectorBtn" onclick="closeSelectorOverlay()">✕</button>
+                    <div class="selector-box" id="selectorBox">
+                        <div class="selector-header">
+                            <h3>🎲 WINNER SELECTION</h3>
+                            <div class="selector-subtitle">Fast Selection in Progress...</div>
+                        </div>
+                        <div class="selector-display">
+                            <div class="id-display" id="idDisplay">
+                                <span class="current-id" id="currentId">---</span>
+                                <div class="id-label">WALLET ID</div>
+                            </div>
+                        </div>
+                        <div class="selector-progress">
+                            <div class="progress-bar" id="progressBar"></div>
+                        </div>
+                    </div>
+                    <div class="selector-info" id="selectorInfo">
+                        <h3>Winner Pool</h3>
+                        <p id="eligibleVotersCount">0 eligible voters</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Spinning Wheel Section -->
-        <div class="results-section" id="spinningSection" style="display: none;">
-            <h2 class="results-title">🎰 Spinning the Wheel...</h2>
-            <div class="spinning-wheel spinning">
-                <div class="wheel-pointer"></div>
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Wallet Verification -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Wallet Verification</h3>
+                <div class="wallet-section">
+                    <input type="text" id="walletInput" placeholder="Enter Solana wallet address..." />
+                    <button class="verify-btn" onclick="verifyWallet()">VERIFY WALLET</button>
+                    <div id="verificationStatus" style="margin-top: 15px; font-size: 14px;"></div>
+                </div>
             </div>
-            <p style="color: #ccc;">Determining the winning color...</p>
-        </div>
 
-        <!-- Results Section -->
-        <div class="results-section" id="resultsSection" style="display: none;">
-            <h2 class="results-title">🏆 Round Results</h2>
-            <div class="winning-color" id="winningColor">-</div>
-            <div class="winner-info" id="winnerInfo" style="display: none;">
-                <h3 style="color: #ffd700; margin-bottom: 10px;">🎉 Winner Selected!</h3>
-                <div class="winner-address" id="winnerAddress">-</div>
-                <p style="color: #ccc; margin-top: 10px;">Congratulations to the winner!</p>
+            <!-- Live Voters -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Live Voters</h3>
+                <div class="voters-list" id="votersList">
+                    <div style="text-align: center; color: #cc0000; padding: 30px; border: 1px dashed #ff0000; border-radius: 10px;">
+                        No voters yet...
+                    </div>
+                </div>
             </div>
-            <div id="noWinnerInfo" style="display: none;">
-                <p style="color: #ccc;">No participants voted for the winning color</p>
+
+            <!-- Game Stats -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Game Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalPlayers">0</span>
+                        <span class="stat-label">Total Players</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalRounds">0</span>
+                        <span class="stat-label">Rounds Played</span>
+                    </div>
+                    <div class="stat-item expanded-winner">
+                        <div class="winner-content">
+                            <div class="winner-info">
+                                <span class="stat-value" id="lastWinner">None</span>
+                                <span class="stat-label">Latest Winner</span>
+                            </div>
+                            <button class="copy-winner-btn" id="copyWinnerBtn" onclick="copyWinnerAddress()" title="Copy winner address">
+                                📋
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="config.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Pool Announcement Modal -->
+    <div class="pool-announcement" id="poolModal">
+        <div class="pool-text" id="poolText">RED WINS!</div>
+        <div class="pool-subtitle">Winning Pool</div>
+        <div class="pool-count" id="poolCount">0 voters eligible</div>
+        <button class="continue-btn" onclick="closePoolModal()">SPIN WHEEL</button>
+    </div>
+
+    <!-- Winner Announcement Modal -->
+    <div class="winner-announcement" id="winnerModal">
+        <div class="winner-text">🎉 WINNER! 🎉</div>
+        <div class="winner-address" id="winnerAddress"></div>
+        <div style="margin: 25px 0; font-size: 1.5rem; color: #ff0000; text-shadow: 0 0 15px #ff0000;">
+            Prize: <span id="prizeAmount">0 SOL</span>
+        </div>
+        <button class="close-winner" onclick="closeWinnerModal()">CONTINUE</button>
+    </div>
+
     <script>
-        // Game state
-        let gameState = null;
-        let userWallet = null;
+        // Global variables
+        let socket = null;
         let isVerified = false;
         let hasVoted = false;
-        let socket = null;
+        let currentRoundNumber = 1;
+        let gameState = null;
+        let clientTimeLeft = 0;
+        let timerInterval = null;
+        let isSpinning = false;
+        let poolAnnounced = false;
+        let isInitialized = false;
+        let lastVisibilityChange = 0;
+        let isVerifying = false;
 
-        // DOM elements
-        const elements = {
-            connectionStatus: document.getElementById('connectionStatus'),
-            phaseIndicator: document.getElementById('phaseIndicator'),
-            timer: document.getElementById('timer'),
-            currentRound: document.getElementById('currentRound'),
-            totalParticipants: document.getElementById('totalParticipants'),
-            totalRounds: document.getElementById('totalRounds'),
-            totalPrizes: document.getElementById('totalPrizes'),
-            walletInput: document.getElementById('walletInput'),
-            verifyBtn: document.getElementById('verifyBtn'),
-            verificationStatus: document.getElementById('verificationStatus'),
-            votingSection: document.getElementById('votingSection'),
-            votingMessage: document.getElementById('votingMessage'),
-            voteRedBtn: document.getElementById('voteRedBtn'),
-            voteBlackBtn: document.getElementById('voteBlackBtn'),
-            redVotes: document.getElementById('redVotes'),
-            blackVotes: document.getElementById('blackVotes'),
-            spinningSection: document.getElementById('spinningSection'),
-            resultsSection: document.getElementById('resultsSection'),
-            winningColor: document.getElementById('winningColor'),
-            winnerInfo: document.getElementById('winnerInfo'),
-            winnerAddress: document.getElementById('winnerAddress'),
-            noWinnerInfo: document.getElementById('noWinnerInfo')
-        };
-
-        // Initialize WebSocket connection
-        function initializeWebSocket() {
+        // Initialize connection
+        function initializeConnection() {
+            // Use configuration
             socket = io(window.APP_CONFIG.WS_URL);
-
+            
             socket.on('connect', () => {
-                console.log('✅ Connected to server');
-                elements.connectionStatus.textContent = '🟢 Connected';
-                elements.connectionStatus.className = 'connection-status status-connected';
+                console.log('🔴 Connected to Red or Black Casino');
+                updateConnectionStatus(true);
+                createConnectionParticles();
             });
 
             socket.on('disconnect', () => {
-                console.log('❌ Disconnected from server');
-                elements.connectionStatus.textContent = '🔴 Disconnected';
-                elements.connectionStatus.className = 'connection-status status-disconnected';
+                console.log('⚫ Disconnected from server');
+                updateConnectionStatus(false);
             });
 
             socket.on('gameUpdate', (data) => {
-                console.log('📡 Game update received:', data);
-                updateGameState(data);
+                console.log('🎰 Game update received:', data);
+                updateGameUI(data);
+                createUpdateParticles();
             });
+
+            // Initial data request
+            fetchGameStatus();
+            fetchParticipants();
         }
 
-        // Update game state and UI
-        function updateGameState(data) {
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = '🔴 CONNECTED';
+                status.className = 'connection-status connected';
+            } else {
+                status.textContent = '⚫ DISCONNECTED';
+                status.className = 'connection-status disconnected';
+            }
+        }
+
+        // Fetch game status from API
+        async function fetchGameStatus() {
+            try {
+                const response = await fetch(`${window.APP_CONFIG.API_URL}/api/status`);
+                const data = await response.json();
+                if (data.success) {
+                    updateGameUI(data);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching game status:', error);
+            }
+        }
+
+        // Fetch participants
+        async function fetchParticipants() {
+            try {
+                const response = await fetch(`${window.APP_CONFIG.API_URL}/api/participants`);
+                const data = await response.json();
+                if (data.success) {
+                    updateVotersList(data.recentVotes);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching participants:', error);
+            }
+        }
+
+        // Update the entire UI with game data
+        function updateGameUI(data) {
             gameState = data;
             
-            // Update stats
-            elements.currentRound.textContent = data.gameState.currentRound;
-            elements.totalParticipants.textContent = data.roundData.participants;
-            elements.totalRounds.textContent = data.gameState.totalRoundsPlayed;
-            elements.totalPrizes.textContent = data.gameState.totalPrizesGiven;
-
-            // Update phase indicator
-            updatePhaseIndicator(data.gameState.currentPhase);
-            
-            // Update timer
-            updateTimer(data.gameState.timeLeft);
-            
-            // Update vote counts
-            elements.redVotes.textContent = data.roundData.votes.red;
-            elements.blackVotes.textContent = data.roundData.votes.black;
-            
-            // Update UI based on phase
-            updateUIForPhase(data.gameState.currentPhase, data.roundData);
-        }
-
-        // Update phase indicator
-        function updatePhaseIndicator(phase) {
-            const indicator = elements.phaseIndicator;
-            
-            switch(phase) {
-                case 'voting':
-                    indicator.textContent = '🗳️ Voting Phase';
-                    indicator.className = 'phase-indicator phase-voting';
-                    break;
-                case 'spinning':
-                    indicator.textContent = '🎰 Spinning Phase';
-                    indicator.className = 'phase-indicator phase-spinning';
-                    break;
-                case 'results':
-                    indicator.textContent = '🏆 Results Phase';
-                    indicator.className = 'phase-indicator phase-results';
-                    break;
-                default:
-                    indicator.textContent = '🔍 Loading...';
-                    indicator.className = 'phase-indicator';
-            }
-        }
-
-        // Update timer display
-        function updateTimer(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            elements.timer.textContent = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-        }
-
-        // Update UI based on current phase
-        function updateUIForPhase(phase, roundData) {
-            // Hide all phase-specific sections first
-            elements.spinningSection.style.display = 'none';
-            elements.resultsSection.style.display = 'none';
-            
-            switch(phase) {
-                case 'voting':
-                    updateVotingUI();
-                    break;
-                case 'spinning':
-                    elements.spinningSection.style.display = 'block';
-                    disableVoting();
-                    break;
-                case 'results':
-                    showResults(roundData);
-                    disableVoting();
-                    break;
-            }
-        }
-
-        // Update voting UI
-        function updateVotingUI() {
-            if (!isVerified) {
-                elements.votingMessage.textContent = 'Verify your wallet first to vote';
-                elements.voteRedBtn.disabled = true;
-                elements.voteBlackBtn.disabled = true;
-            } else if (hasVoted) {
-                elements.votingMessage.textContent = 'You have already voted this round';
-                elements.voteRedBtn.disabled = true;
-                elements.voteBlackBtn.disabled = true;
-            } else {
-                elements.votingMessage.textContent = 'Choose your color and cast your vote!';
-                elements.voteRedBtn.disabled = false;
-                elements.voteBlackBtn.disabled = false;
-            }
-        }
-
-        // Disable voting buttons
-        function disableVoting() {
-            elements.voteRedBtn.disabled = true;
-            elements.voteBlackBtn.disabled = true;
-            
-            if (gameState && gameState.gameState.currentPhase === 'spinning') {
-                elements.votingMessage.textContent = 'Voting closed - Spinning the wheel...';
-            } else if (gameState && gameState.gameState.currentPhase === 'results') {
-                elements.votingMessage.textContent = 'Round ended - Next round starting soon...';
-            }
-        }
-
-        // Show results
-        function showResults(roundData) {
-            elements.resultsSection.style.display = 'block';
-            
-            if (roundData.winningColor) {
-                elements.winningColor.textContent = roundData.winningColor.toUpperCase();
-                elements.winningColor.className = `winning-color winning-${roundData.winningColor}`;
+            if (data.gameState) {
+                // Update round info
+                currentRoundNumber = data.gameState.currentRound;
+                document.getElementById('currentRound').textContent = currentRoundNumber;
                 
-                if (roundData.winner) {
-                    elements.winnerInfo.style.display = 'block';
-                    elements.noWinnerInfo.style.display = 'none';
-                    elements.winnerAddress.textContent = roundData.winner;
+                // Update timer - simple approach
+                const serverTimeLeft = data.gameState.timeLeft || 0;
+                const fallbackTime = data.config?.roundDuration ? Math.floor(data.config.roundDuration / 1000) : 300;
+                
+                // Use server time if reasonable, otherwise use fallback
+                const timeToUse = serverTimeLeft > 0 ? serverTimeLeft : fallbackTime;
+                
+                updateTimer(timeToUse);
+                
+                // Update stats
+                document.getElementById('totalRounds').textContent = data.gameState.totalRoundsPlayed;
+                
+                if (data.gameState.lastWinner) {
+                    const winnerAddress = data.gameState.lastWinner;
+                    const shortAddress = winnerAddress.length > 16 ? 
+                        `${winnerAddress.substring(0, 8)}...${winnerAddress.substring(winnerAddress.length - 6)}` : 
+                        winnerAddress;
+                    document.getElementById('lastWinner').textContent = shortAddress;
+                    document.getElementById('lastWinner').title = `Full address: ${winnerAddress}`;
+                    
+                    // Enable copy button and store full address
+                    const copyBtn = document.getElementById('copyWinnerBtn');
+                    copyBtn.disabled = false;
+                    copyBtn.setAttribute('data-address', winnerAddress);
+                    copyBtn.title = 'Copy winner address to clipboard';
                 } else {
-                    elements.winnerInfo.style.display = 'none';
-                    elements.noWinnerInfo.style.display = 'block';
+                    document.getElementById('lastWinner').textContent = 'No Winner Yet';
+                    document.getElementById('lastWinner').title = 'No winner in the latest round';
+                    
+                    // Disable copy button
+                    const copyBtn = document.getElementById('copyWinnerBtn');
+                    copyBtn.disabled = true;
+                    copyBtn.removeAttribute('data-address');
+                    copyBtn.title = 'No winner to copy';
                 }
             }
-        }
 
-        // Verify wallet
-        async function verifyWallet() {
-            const walletAddress = elements.walletInput.value.trim();
-            
-            if (!walletAddress) {
-                showVerificationStatus('Please enter a wallet address', 'error');
-                return;
+            if (data.roundData) {
+                // Update vote counts with animation
+                animateCountUpdate('redCount', data.roundData.votes.red || 0);
+                animateCountUpdate('blackCount', data.roundData.votes.black || 0);
+                document.getElementById('totalPlayers').textContent = data.roundData.participants || 0;
+                
+                // Debug winner information
+                if (data.roundData.winner) {
+                    console.log('🏆 Winner received from server:', data.roundData.winner);
+                }
+                if (data.roundData.winningColor) {
+                    console.log('🎨 Winning color:', data.roundData.winningColor);
+                }
+                if (data.roundData.recentVotes) {
+                    console.log('🗳️ Recent votes count:', data.roundData.recentVotes.length);
+                }
+                
+                // Update game status and UI based on round status
+                updateGameStatus(data.roundData.status, data.roundData);
             }
 
-            elements.verifyBtn.disabled = true;
-            elements.verifyBtn.textContent = '🔄 Verifying...';
+            // Fetch updated participants
+            fetchParticipants();
+        }
 
+        // Animate count updates
+        function animateCountUpdate(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            const currentValue = parseInt(element.textContent) || 0;
+            
+            if (currentValue !== newValue) {
+                element.style.transform = 'scale(1.2)';
+                element.style.transition = 'transform 0.3s ease';
+                
+                setTimeout(() => {
+                    element.textContent = newValue;
+                    element.style.transform = 'scale(1)';
+                    createVoteParticles(element);
+                }, 150);
+            }
+        }
+
+        // Update game status
+        function updateGameStatus(status, roundData) {
+            console.log('🎮 Updating game status:', status);
+            console.log('📊 Round data:', roundData);
+            console.log('🔧 Is initialized:', isInitialized);
+            
+            const statusElement = document.getElementById('gameStatus');
+            const votingSection = document.getElementById('votingSection');
+            const selectorContainer = document.getElementById('selectorContainer');
+            
+            // During initialization, only show basic status updates
+            if (!isInitialized) {
+                console.log('⚠️ App not initialized, showing basic status only');
+                statusElement.innerHTML = '⏳ LOADING...';
+                statusElement.className = 'status neon-red loading';
+                // Keep voting section visible but disabled during loading
+                votingSection.style.display = 'grid';
+                selectorContainer.style.display = 'none';
+                disableVoting();
+                return;
+            }
+            
+            switch (status) {
+                case 'voting':
+                    console.log('🗳️ VOTING ACTIVE - Resetting all states');
+                    isSpinning = false;
+                    poolAnnounced = false;
+                    
+                    statusElement.innerHTML = '🗳️ VOTING ACTIVE';
+                    statusElement.className = 'status neon-red pulse';
+                    votingSection.style.display = 'grid';
+                    selectorContainer.style.display = 'none';
+                    enableVoting();
+                    break;
+                    
+                case 'spinning':
+                    console.log('🎰 SPINNING STATUS DETECTED!');
+                    
+                    // Prevent spinning during initialization
+                    if (!isInitialized) {
+                        console.log('⚠️ App not initialized yet, ignoring spinning trigger');
+                        return;
+                    }
+                    
+                    // Prevent multiple spinning triggers
+                    if (isSpinning) {
+                        console.log('⚠️ Already spinning, ignoring duplicate trigger');
+                        return;
+                    }
+                    
+                    // Additional check: if we just became visible, don't trigger immediately
+                    const timeSinceVisibilityChange = Date.now() - lastVisibilityChange;
+                    if (document.hidden || wasHidden || timeSinceVisibilityChange < 3000) {
+                        console.log('⚠️ Page visibility issue or recent visibility change, ignoring spinning trigger');
+                        return;
+                    }
+                    
+                    // Don't trigger selector during verification
+                    if (isVerifying) {
+                        console.log('⚠️ User is verifying wallet, ignoring spinning trigger');
+                        return;
+                    }
+                    
+                    const winningColor = gameState?.roundData?.winningColor;
+                    const eligibleVotes = gameState?.roundData?.recentVotes?.filter(vote => vote.color === winningColor) || [];
+                    
+                    console.log('🎨 Winning color:', winningColor);
+                    console.log('👥 Eligible votes:', eligibleVotes.length);
+                    
+                    statusElement.innerHTML = `🎰 POOL ANNOUNCEMENT...<br><small>Winning Color: ${winningColor?.toUpperCase() || 'SELECTING...'}<br>Eligible Voters: ${eligibleVotes.length}</small>`;
+                    statusElement.className = 'status neon-red pulse';
+                    // Keep voting section visible but disable voting
+                    votingSection.style.display = 'grid';
+                    selectorContainer.style.display = 'none'; // Don't show selector yet
+                    disableVoting();
+                    
+                    // Set spinning state
+                    isSpinning = true;
+                    poolAnnounced = false;
+                    
+                    // Show pool announcement first if we have winning color, otherwise start selector directly
+                    if (winningColor) {
+                        console.log('🏆 Showing pool announcement for winning color:', winningColor);
+                        showPoolAnnouncement(winningColor, eligibleVotes.length);
+                    } else {
+                        console.log('⚠️ No winning color yet, starting selector animation directly');
+                        // Prepare selector and start animation directly
+                        if (gameState && gameState.roundData && gameState.roundData.recentVotes) {
+                            prepareSelector(gameState.roundData.recentVotes, null);
+                        } else {
+                            prepareSelector([], null);
+                        }
+                        selectorContainer.style.display = 'flex';
+                        startSelectorAnimation();
+                    }
+                    break;
+                    
+                case 'completed':
+                    console.log('✅ ROUND COMPLETED - Resetting spinning state');
+                    isSpinning = false;
+                    poolAnnounced = false;
+                    
+                    statusElement.innerHTML = '✅ ROUND COMPLETE';
+                    statusElement.className = 'status neon-red';
+                    // Keep voting section visible but disable voting
+                    votingSection.style.display = 'grid';
+                    selectorContainer.style.display = 'none';
+                    disableVoting();
+                    
+                    if (roundData.winner) {
+                        setTimeout(() => {
+                            showWinner(roundData.winner, roundData.prizeAmount, roundData.winningColor);
+                        }, 1000);
+                    }
+                    break;
+                    
+                default:
+                    statusElement.innerHTML = '⏳ PREPARING ROUND...';
+                    statusElement.className = 'status neon-red loading';
+                    // Keep voting section visible but disabled
+                    votingSection.style.display = 'grid';
+                    selectorContainer.style.display = 'none';
+                    disableVoting();
+            }
+        }
+
+        // Simple timer update
+        function updateTimer(timeLeft) {
+            console.log('🕐 Timer update:', timeLeft, 'seconds');
+            
+            // Clear existing timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // Set new time
+            clientTimeLeft = Math.max(0, timeLeft);
+            
+            // Start countdown if time > 0
+            if (clientTimeLeft > 0) {
+                timerInterval = setInterval(() => {
+                    clientTimeLeft = Math.max(0, clientTimeLeft - 1);
+                    displayTimer(clientTimeLeft);
+                }, 1000);
+            }
+            
+            // Display current time
+            displayTimer(clientTimeLeft);
+        }
+        
+        // Display timer with effects
+        function displayTimer(timeLeft) {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            const timerElement = document.getElementById('timer');
+            
+            timerElement.textContent = display;
+            
+            if (timeLeft <= 10 && timeLeft > 0) {
+                timerElement.classList.add('pulse');
+                timerElement.style.color = '#ff4444';
+                
+                // Create urgency particles
+                if (timeLeft <= 5) {
+                    createUrgencyParticles();
+                }
+            } else {
+                timerElement.classList.remove('pulse');
+                timerElement.style.color = '#ff4444';
+            }
+        }
+
+        // Wallet verification with enhanced feedback
+        async function verifyWallet() {
+            const walletAddress = document.getElementById('walletInput').value.trim();
+            const statusDiv = document.getElementById('verificationStatus');
+            const verifyBtn = document.querySelector('.verify-btn');
+            
+            if (!walletAddress) {
+                statusDiv.innerHTML = '<span style="color: #ff0000; text-shadow: 0 0 10px #ff0000;">⚠️ Please enter wallet address</span>';
+                return;
+            }
+            
+            // Set verification flag to prevent random selector from appearing
+            isVerifying = true;
+            
+            verifyBtn.textContent = 'VERIFYING...';
+            verifyBtn.style.opacity = '0.7';
+            statusDiv.innerHTML = '<span style="color: #ff0000; text-shadow: 0 0 10px #ff0000;">🔍 Checking token balance...</span>';
+            
             try {
                 const response = await fetch(`${window.APP_CONFIG.API_URL}/api/verify-wallet`, {
                     method: 'POST',
@@ -739,133 +1728,894 @@
                     },
                     body: JSON.stringify({ walletAddress })
                 });
-
+                
                 const data = await response.json();
-
+                
                 if (data.success) {
-                    userWallet = walletAddress;
                     isVerified = true;
-                    showVerificationStatus(data.message, 'success');
-                    updateVotingUI();
+                    statusDiv.innerHTML = `<span style="color: #ff0000; text-shadow: 0 0 15px #ff0000;">✅ VERIFIED! Balance: ${Math.floor(data.balance / 1000000)}M tokens</span>`;
+                    verifyBtn.textContent = 'WALLET VERIFIED';
+                    verifyBtn.style.background = 'linear-gradient(135deg, #ff0000, #cc0000)';
+                    enableVoting();
+                    createVerificationParticles();
                 } else {
-                    showVerificationStatus(data.error, 'error');
+                    isVerified = false;
+                    statusDiv.innerHTML = `<span style="color: #ff0000; text-shadow: 0 0 15px #ff0000;">❌ ${data.error}</span>`;
+                    verifyBtn.textContent = 'VERIFICATION FAILED';
                 }
+                
+                // Clear verification flag
+                isVerifying = false;
             } catch (error) {
+                statusDiv.innerHTML = '<span style="color: #ff0000; text-shadow: 0 0 15px #ff0000;">❌ Network error - Try again</span>';
                 console.error('Verification error:', error);
-                showVerificationStatus('Network error. Please try again.', 'error');
-            } finally {
-                elements.verifyBtn.disabled = false;
-                elements.verifyBtn.textContent = '🔍 Verify Wallet';
+                // Clear verification flag on error too
+                isVerifying = false;
             }
+            
+            verifyBtn.style.opacity = '1';
+            setTimeout(() => {
+                if (verifyBtn.textContent !== 'WALLET VERIFIED') {
+                    verifyBtn.textContent = 'VERIFY WALLET';
+                }
+            }, 3000);
         }
 
-        // Show verification status
-        function showVerificationStatus(message, type) {
-            elements.verificationStatus.textContent = message;
-            elements.verificationStatus.className = `verification-status status-${type}`;
-            elements.verificationStatus.style.display = 'block';
-        }
-
-        // Cast vote
-        async function castVote(color) {
+        // Enhanced voting with explosive effects
+        async function vote(color) {
             if (!isVerified) {
-                showVerificationStatus('Please verify your wallet first', 'error');
+                alert('🚫 Please verify your wallet first!');
                 return;
             }
-
-            if (hasVoted) {
-                showVerificationStatus('You have already voted this round', 'error');
-                return;
-            }
-
-            const voteBtn = color === 'red' ? elements.voteRedBtn : elements.voteBlackBtn;
-            voteBtn.disabled = true;
-            voteBtn.textContent = '🔄 Voting...';
-
+            
+            const walletAddress = document.getElementById('walletInput').value.trim();
+            const button = color === 'red' ? document.getElementById('redButton') : document.getElementById('blackButton');
+            
+            // Pre-vote animation
+            button.style.transform = 'scale(0.95)';
+            createVoteExplosion(button, color);
+            
             try {
                 const response = await fetch(`${window.APP_CONFIG.API_URL}/api/vote`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        walletAddress: userWallet,
-                        color: color
-                    })
+                    body: JSON.stringify({ walletAddress, color })
                 });
-
+                
                 const data = await response.json();
-
+                
                 if (data.success) {
                     hasVoted = true;
-                    showVerificationStatus(`Vote cast for ${color.toUpperCase()}! 🎉`, 'success');
-                    updateVotingUI();
+                    disableVoting();
+                    
+                    // Success animation
+                    button.style.transform = 'scale(1.1)';
+                    button.style.boxShadow = `0 0 80px #ff0000, 0 0 120px #ff0000`;
+                    
+                    setTimeout(() => {
+                        button.style.transform = 'scale(1)';
+                        button.style.boxShadow = '';
+                    }, 500);
+                    
+                    // Play success sound
+                    playSound('vote');
+                    
+                    console.log('🎯 Vote cast successfully:', data);
                 } else {
-                    showVerificationStatus(data.error, 'error');
+                    alert(`❌ Vote failed: ${data.error}`);
+                    button.style.transform = 'scale(1)';
                 }
             } catch (error) {
-                console.error('Voting error:', error);
-                showVerificationStatus('Network error. Please try again.', 'error');
-            } finally {
-                // Reset button text
-                elements.voteRedBtn.textContent = '🔴 RED';
-                elements.voteBlackBtn.textContent = '⚫ BLACK';
+                alert('❌ Network error. Please try again.');
+                console.error('Vote error:', error);
+                button.style.transform = 'scale(1)';
             }
         }
 
-        // Event listeners
-        elements.verifyBtn.addEventListener('click', verifyWallet);
-        elements.voteRedBtn.addEventListener('click', () => castVote('red'));
-        elements.voteBlackBtn.addEventListener('click', () => castVote('black'));
+        // Enable/disable voting buttons
+        function enableVoting() {
+            const redBtn = document.getElementById('redButton');
+            const blackBtn = document.getElementById('blackButton');
+            
+            // Always show the buttons, but enable/disable based on conditions
+            if (isVerified && !hasVoted && gameState?.roundData?.status === 'voting') {
+                redBtn.disabled = false;
+                blackBtn.disabled = false;
+                
+                // Add pulsing effect when enabled
+                redBtn.style.animation = 'pulseRed 2s ease-in-out infinite';
+                blackBtn.style.animation = 'pulseRed 2s ease-in-out infinite';
+            } else {
+                // Disable but keep visible
+                redBtn.disabled = true;
+                blackBtn.disabled = true;
+                redBtn.style.animation = 'none';
+                blackBtn.style.animation = 'none';
+            }
+        }
 
-        // Allow Enter key for wallet verification
-        elements.walletInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                verifyWallet();
+        function disableVoting() {
+            const redBtn = document.getElementById('redButton');
+            const blackBtn = document.getElementById('blackButton');
+            
+            redBtn.disabled = true;
+            blackBtn.disabled = true;
+            redBtn.style.animation = 'none';
+            blackBtn.style.animation = 'none';
+        }
+
+        // Create wheel with individual segments for each voter
+        function prepareSelector(votes, winningColor) {
+            const currentIdElement = document.getElementById('currentId');
+            const progressBar = document.getElementById('progressBar');
+            const selectorSubtitle = document.querySelector('.selector-subtitle');
+            
+            // Clear any previous state
+            currentIdElement.textContent = '---';
+            progressBar.style.animation = 'none';
+            selectorSubtitle.textContent = 'Preparing Selection...';
+            
+            if (!votes || votes.length === 0) {
+                console.log('🎲 No votes available for selector');
+                document.getElementById('eligibleVotersCount').textContent = '0 voters';
+                return [];
+            }
+            
+            // Filter votes by winning color - ONLY show voters who voted for the winning color
+            const eligibleVotes = votes.filter(vote => vote.color === winningColor);
+            
+            console.log('🔍 All votes:', votes);
+            console.log('🎨 Winning color:', winningColor);
+            console.log('✅ Eligible votes (only winning color voters):', eligibleVotes);
+            
+            // ONLY use eligible votes (voters who chose the winning color)
+            let votesToShow = eligibleVotes;
+            if (winningColor && eligibleVotes.length > 0) {
+                console.log('🎯 Using eligible votes for winning color:', winningColor, '- Count:', eligibleVotes.length);
+            } else if (winningColor && eligibleVotes.length === 0) {
+                console.log('⚠️ No voters chose the winning color:', winningColor);
+                votesToShow = []; // No eligible voters
+            } else {
+                console.log('⚠️ No winning color specified yet');
+                votesToShow = []; // Wait for winning color
+            }
+            
+            // Update info
+            document.getElementById('eligibleVotersCount').textContent = `${votesToShow.length} voters`;
+            
+            if (votesToShow.length === 0) {
+                console.log('⚠️ No voters to show');
+                return [];
+            }
+            
+            console.log('🎲 Preparing selector for', votesToShow.length, 'voters');
+            return votesToShow;
+        }
+
+
+        // Enhanced selector animation with fast-moving IDs
+        function startSelectorAnimation() {
+            console.log('🎲 startSelectorAnimation() called');
+            
+            // Prevent multiple animations
+            if (isSpinning) {
+                console.log('⚠️ Selector is already running, ignoring duplicate call');
+                return;
+            }
+            
+            const currentIdElement = document.getElementById('currentId');
+            const progressBar = document.getElementById('progressBar');
+            const selectorSubtitle = document.querySelector('.selector-subtitle');
+            
+            console.log('🎲 Starting selector animation');
+            
+            // Get eligible voters - ONLY voters who voted for the winning color
+            const winningColor = gameState?.roundData?.winningColor;
+            let eligibleVotes = [];
+            
+            if (winningColor) {
+                eligibleVotes = gameState?.roundData?.recentVotes?.filter(vote => vote.color === winningColor) || [];
+                console.log('🎲 Using winning color filter:', winningColor, 'eligible votes:', eligibleVotes.length);
+            } else {
+                console.log('🎲 No winning color available yet, cannot start selector');
+                eligibleVotes = [];
+            }
+            
+            if (eligibleVotes.length === 0) {
+                console.log('⚠️ No eligible voters for selection');
+                currentIdElement.textContent = 'NO VOTERS';
+                selectorSubtitle.textContent = 'No eligible voters found';
+                return;
+            }
+            
+            // Set spinning state
+            isSpinning = true;
+            selectorSubtitle.textContent = 'Fast Selection in Progress...';
+            
+            // Start progress bar animation
+            progressBar.style.animation = 'progressFill 3s ease-out forwards';
+            
+            // Play selection sound
+            playSound('spin');
+            
+            // Fast scrolling animation
+            let currentIndex = 0;
+            let scrollSpeed = 50; // Start fast (50ms between changes)
+            let finalIndex = Math.floor(Math.random() * eligibleVotes.length);
+            
+            console.log('🎲 Final winner index:', finalIndex, 'of', eligibleVotes.length);
+            
+            let animationTime = 0;
+            const totalAnimationTime = 3000; // 3 seconds total
+            const slowDownStart = 2000; // Start slowing down at 2 seconds
+            
+            const scrollInterval = setInterval(() => {
+                animationTime += scrollSpeed;
+                
+                // Display current ID
+                const currentVote = eligibleVotes[currentIndex];
+                const shortId = currentVote.walletAddress.substring(0, 8) + '...' + currentVote.walletAddress.substring(-6);
+                currentIdElement.textContent = shortId;
+                
+                // Move to next index
+                currentIndex = (currentIndex + 1) % eligibleVotes.length;
+                
+                // Gradually slow down as we approach the end
+                if (animationTime >= slowDownStart) {
+                    scrollSpeed = Math.max(200, scrollSpeed + 10); // Slow down gradually
+                }
+                
+                // Stop at final index
+                if (animationTime >= totalAnimationTime || (animationTime >= slowDownStart && currentIndex === finalIndex)) {
+                    clearInterval(scrollInterval);
+                    
+                    // Final selection
+                    const winnerVote = eligibleVotes[finalIndex];
+                    const winnerId = winnerVote.walletAddress.substring(0, 8) + '...' + winnerVote.walletAddress.substring(-6);
+                    currentIdElement.textContent = winnerId;
+                    currentIdElement.style.animation = 'pulse 0.5s ease-in-out 3';
+                    
+                    selectorSubtitle.textContent = '🎉 WINNER SELECTED!';
+                    
+                    // Play winner sound
+                    playSound('spinStop');
+                    
+                    // Reset spinning state
+                    isSpinning = false;
+                    console.log('🎲 Selection completed, winner:', winnerVote.walletAddress);
+                    
+                    // Create winner particles
+                    createWinnerParticles();
+                    
+                    // Wait for server to provide winner, then highlight
+                    setTimeout(() => {
+                        checkAndHighlightWinner();
+                    }, 500);
+                }
+            }, scrollSpeed);
+            
+            // Safety timeout
+            setTimeout(() => {
+                if (isSpinning) {
+                    clearInterval(scrollInterval);
+                    isSpinning = false;
+                    console.log('🎲 Selection timeout, using random winner');
+                    
+                    const randomWinner = eligibleVotes[Math.floor(Math.random() * eligibleVotes.length)];
+                    const winnerId = randomWinner.walletAddress.substring(0, 8) + '...' + randomWinner.walletAddress.substring(-6);
+                    currentIdElement.textContent = winnerId;
+                    selectorSubtitle.textContent = '🎉 WINNER SELECTED!';
+                }
+            }, 3000);
+        }
+
+        // Check for winner from server and show result
+        function checkAndHighlightWinner() {
+            console.log('🔍 Checking for winner...');
+            console.log('Game state:', gameState);
+            
+            const eligibleVotes = gameState?.roundData?.recentVotes?.filter(vote => vote.color === gameState?.roundData?.winningColor) || [];
+            console.log('Eligible votes:', eligibleVotes);
+            
+            if (eligibleVotes.length > 0) {
+                // Use server-provided winner if available, otherwise use the one from selector
+                let winnerAddress = gameState?.roundData?.winner;
+                
+                if (!winnerAddress) {
+                    // Get the winner from the current display
+                    const currentIdElement = document.getElementById('currentId');
+                    const currentDisplay = currentIdElement.textContent;
+                    
+                    // Find the matching vote by partial address
+                    const winnerVote = eligibleVotes.find(vote => {
+                        const shortId = vote.walletAddress.substring(0, 8) + '...' + vote.walletAddress.substring(-6);
+                        return shortId === currentDisplay;
+                    });
+                    
+                    if (winnerVote) {
+                        winnerAddress = winnerVote.walletAddress;
+                        console.log('🎲 Winner from selector display:', winnerAddress);
+                    } else {
+                        // Fallback: calculate random winner from eligible voters
+                        const winnerIndex = Math.floor(Math.random() * eligibleVotes.length);
+                        winnerAddress = eligibleVotes[winnerIndex].walletAddress;
+                        console.log('🎲 Fallback winner calculated:', winnerAddress);
+                    }
+                } else {
+                    console.log('🏆 Server-provided winner:', winnerAddress);
+                }
+                
+                // Show winner announcement
+                setTimeout(() => {
+                    showWinnerAnnouncement(winnerAddress);
+                }, 500);
+            } else {
+                console.log('❌ No eligible voters for winner selection');
+            }
+        }
+
+        // Show winner announcement modal
+        function showWinnerAnnouncement(winnerAddress) {
+            console.log('🎉 Showing winner announcement for:', winnerAddress);
+            
+            // Close selector overlay
+            closeSelectorOverlay();
+            
+            // Show winner modal
+            const winnerModal = document.getElementById('winnerModal');
+            const winnerAddressElement = document.getElementById('winnerAddress');
+            const copyBtn = document.getElementById('copyWinnerBtn');
+            
+            winnerAddressElement.textContent = winnerAddress;
+            copyBtn.setAttribute('data-address', winnerAddress);
+            
+            winnerModal.style.display = 'flex';
+            
+            // Create winner explosion effect
+            createWinnerExplosion();
+            
+            console.log('🎉 Winner announcement displayed');
+        }
+        
+
+        // Update voters list with enhanced styling
+        function updateVotersList(votes) {
+            const votersList = document.getElementById('votersList');
+            
+            if (!votes || votes.length === 0) {
+                votersList.innerHTML = `
+                    <div style="text-align: center; color: #cc0000; padding: 30px; border: 1px dashed #ff0000; border-radius: 10px; background: rgba(255,0,0,0.05);">
+                        <div style="font-size: 1.5rem; margin-bottom: 10px;">⏳</div>
+                        Waiting for first voter...
+                    </div>
+                `;
+                return;
+            }
+            
+            votersList.innerHTML = votes.map(vote => {
+                const address = vote.walletAddress;
+                const shortAddress = address.length > 16 ? 
+                    `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : 
+                    address;
+                
+                return `
+                    <div class="voter-item" title="Full address: ${address}">
+                        <span class="voter-address">${shortAddress}</span>
+                        <span class="voter-vote ${vote.color}">${vote.color.toUpperCase()}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Enhanced winner modal
+        function showWinner(winnerAddress, prizeAmount, winningColor) {
+            const modal = document.getElementById('winnerModal');
+            const addressElement = document.getElementById('winnerAddress');
+            const prizeElement = document.getElementById('prizeAmount');
+            
+            addressElement.textContent = winnerAddress ? 
+                `${winnerAddress.substring(0, 12)}...${winnerAddress.substring(-8)}` : 
+                'No Winner This Round';
+            
+            prizeElement.textContent = prizeAmount ? `${prizeAmount} SOL` : '0 SOL';
+            
+            modal.style.display = 'block';
+            
+            // Create winner explosion
+            createWinnerExplosion();
+            
+            // Play winner sound
+            playSound('win');
+            
+            // Auto close after 12 seconds
+            setTimeout(() => {
+                closeWinnerModal();
+            }, 12000);
+        }
+
+        // Show pool announcement
+        function showPoolAnnouncement(winningColor, eligibleCount) {
+            // Prevent multiple pool announcements
+            if (poolAnnounced) {
+                console.log('⚠️ Pool already announced, ignoring duplicate');
+                return;
+            }
+            
+            poolAnnounced = true;
+            
+            const modal = document.getElementById('poolModal');
+            const poolText = document.getElementById('poolText');
+            const poolCount = document.getElementById('poolCount');
+            
+            // Set the winning color
+            modal.className = `pool-announcement ${winningColor}`;
+            poolText.className = `pool-text ${winningColor}`;
+            poolText.textContent = `${winningColor.toUpperCase()} WINS!`;
+            poolCount.textContent = `${eligibleCount} voters eligible`;
+            
+            // Show the modal
+            modal.style.display = 'block';
+            
+            // Play announcement sound
+            playSound('win');
+            
+            console.log(`🏆 Pool announcement: ${winningColor} wins with ${eligibleCount} eligible voters`);
+        }
+
+        // Close pool modal and start spinning
+        function closePoolModal() {
+            document.getElementById('poolModal').style.display = 'none';
+            
+            // Show wheel container
+            const selectorContainer = document.getElementById('selectorContainer');
+            selectorContainer.style.display = 'flex';
+            
+            // Prepare selector
+            const winningColor = gameState?.roundData?.winningColor;
+            if (gameState && gameState.roundData && gameState.roundData.recentVotes) {
+                console.log('🔧 Preparing selector after pool announcement');
+                prepareSelector(gameState.roundData.recentVotes, winningColor);
+            } else {
+                console.log('🔧 Preparing empty selector after pool announcement');
+                prepareSelector([], null);
+            }
+            
+            // Start the selector animation
+            console.log('🎲 Starting selector animation after pool announcement');
+            startSelectorAnimation();
+        }
+
+        // Close winner modal
+        function closeWinnerModal() {
+            document.getElementById('winnerModal').style.display = 'none';
+            hasVoted = false; // Reset for next round
+            enableVoting();
+        }
+
+        // Close selector overlay
+        function closeSelectorOverlay() {
+            const selectorContainer = document.getElementById('selectorContainer');
+            selectorContainer.style.display = 'none';
+        }
+
+        // Create winner celebration particles
+        function createWinnerParticles() {
+            const selectorBox = document.getElementById('selectorBox');
+            const rect = selectorBox.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => {
+                    createParticle(
+                        centerX + (Math.random() - 0.5) * 100,
+                        centerY + (Math.random() - 0.5) * 100,
+                        '#ffff00',
+                        Math.random() * 8 + 4,
+                        2000
+                    );
+                }, i * 50);
+            }
+        }
+
+        // Copy winner address to clipboard
+        async function copyWinnerAddress() {
+            const copyBtn = document.getElementById('copyWinnerBtn');
+            const address = copyBtn.getAttribute('data-address');
+            
+            if (!address) {
+                console.log('❌ No winner address to copy');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(address);
+                
+                // Visual feedback
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅';
+                copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
+                copyBtn.style.boxShadow = '0 0 20px #00ff00';
+                
+                // Create success particles
+                createCopySuccessParticles(copyBtn);
+                
+                // Play success sound
+                playSound('vote');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = 'linear-gradient(135deg, #ff0000, #cc0000)';
+                    copyBtn.style.boxShadow = '0 0 15px rgba(255,0,0,0.3), inset 0 0 15px rgba(255,0,0,0.1)';
+                }, 2000);
+                
+                console.log('📋 Winner address copied to clipboard:', address);
+            } catch (error) {
+                console.error('❌ Failed to copy address:', error);
+                
+                // Fallback: show address in alert
+                alert(`Winner Address:\n${address}\n\n(Address copied to your clipboard if supported)`);
+            }
+        }
+        
+        // Create success particles for copy action
+        function createCopySuccessParticles(button) {
+            const rect = button.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    createParticle(
+                        centerX + (Math.random() - 0.5) * 40,
+                        centerY + (Math.random() - 0.5) * 40,
+                        '#00ff00',
+                        Math.random() * 4 + 2,
+                        1000
+                    );
+                }, i * 100);
+            }
+        }
+
+        // Particle effects system
+        function createParticle(x, y, color, size = 4, duration = 1000) {
+            const particle = document.createElement('div');
+            particle.style.position = 'fixed';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            particle.style.background = color;
+            particle.style.borderRadius = '50%';
+            particle.style.pointerEvents = 'none';
+            particle.style.zIndex = '9999';
+            particle.style.boxShadow = `0 0 ${size * 2}px ${color}`;
+            
+            document.body.appendChild(particle);
+            
+            const animation = particle.animate([
+                { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                { transform: `translate(${(Math.random() - 0.5) * 200}px, ${-100 - Math.random() * 100}px) scale(0)`, opacity: 0 }
+            ], {
+                duration: duration,
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            });
+            
+            animation.onfinish = () => particle.remove();
+        }
+
+        function createVoteExplosion(element, color) {
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const particleColor = color === 'red' ? '#ff0000' : '#000000';
+            
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    createParticle(
+                        centerX + (Math.random() - 0.5) * rect.width,
+                        centerY + (Math.random() - 0.5) * rect.height,
+                        particleColor,
+                        Math.random() * 6 + 2,
+                        1500
+                    );
+                }, i * 50);
+            }
+        }
+
+        function createVoteParticles(element) {
+            const rect = element.getBoundingClientRect();
+            for (let i = 0; i < 8; i++) {
+                createParticle(
+                    rect.left + Math.random() * rect.width,
+                    rect.top + Math.random() * rect.height,
+                    '#ff0000',
+                    3,
+                    800
+                );
+            }
+        }
+
+        function createVerificationParticles() {
+            const button = document.querySelector('.verify-btn');
+            const rect = button.getBoundingClientRect();
+            
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    createParticle(
+                        rect.left + Math.random() * rect.width,
+                        rect.top + Math.random() * rect.height,
+                        '#ff0000',
+                        4,
+                        1200
+                    );
+                }, i * 100);
+            }
+        }
+
+        function createConnectionParticles() {
+            const status = document.getElementById('connectionStatus');
+            const rect = status.getBoundingClientRect();
+            
+            for (let i = 0; i < 10; i++) {
+                createParticle(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2,
+                    '#ff0000',
+                    3,
+                    1000
+                );
+            }
+        }
+
+        function createUpdateParticles() {
+            // Create subtle particles on game updates
+            for (let i = 0; i < 3; i++) {
+                createParticle(
+                    Math.random() * window.innerWidth,
+                    Math.random() * 100,
+                    '#ff0000',
+                    2,
+                    2000
+                );
+            }
+        }
+
+        function createUrgencyParticles() {
+            const timer = document.getElementById('timer');
+            const rect = timer.getBoundingClientRect();
+            
+            for (let i = 0; i < 5; i++) {
+                createParticle(
+                    rect.left + Math.random() * rect.width,
+                    rect.top + Math.random() * rect.height,
+                    '#ff0000',
+                    5,
+                    600
+                );
+            }
+        }
+
+
+        function createWinnerExplosion() {
+            const modal = document.getElementById('winnerModal');
+            const rect = modal.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const angle = (i / 50) * 2 * Math.PI;
+                    const radius = Math.random() * 200 + 50;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    createParticle(x, y, '#ff0000', Math.random() * 8 + 4, 2000);
+                }, i * 50);
+            }
+        }
+
+        // Enhanced sound system
+        function playSound(type) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                switch (type) {
+                    case 'vote':
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        break;
+                    case 'spin':
+                        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 2);
+                        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+                        break;
+                    case 'spinStop':
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.5);
+                        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                        break;
+                    case 'win':
+                        // Victory fanfare
+                        [600, 800, 1000, 1200].forEach((freq, i) => {
+                            setTimeout(() => {
+                                const osc = audioContext.createOscillator();
+                                const gain = audioContext.createGain();
+                                osc.connect(gain);
+                                gain.connect(audioContext.destination);
+                                osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+                                gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                                osc.start(audioContext.currentTime);
+                                osc.stop(audioContext.currentTime + 0.3);
+                            }, i * 150);
+                        });
+                        return; // Don't execute default logic
+                }
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 2);
+            } catch (error) {
+                // Sound not supported, fail silently
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                if (!document.getElementById('redButton').disabled) {
+                    vote('red');
+                }
+            } else if (e.key === 'b' || e.key === 'B') {
+                if (!document.getElementById('blackButton').disabled) {
+                    vote('black');
+                }
+            } else if (e.key === 'Enter') {
+                if (document.activeElement === document.getElementById('walletInput')) {
+                    verifyWallet();
+                }
+            } else if (e.key === 's' || e.key === 'S') {
+                // Manual spin trigger for testing
+                console.log('🎡 Manual spin triggered via keyboard');
+                testSpin();
+            } else if (e.key === 'i' || e.key === 'I') {
+                // Manual initialization trigger for testing
+                console.log('🔧 Manual initialization triggered');
+                isInitialized = true;
+                console.log('✅ App manually initialized - spinning now allowed');
             }
         });
 
-        // Reset voting status when new round starts
-        function resetForNewRound() {
-            hasVoted = false;
-            updateVotingUI();
+        // Test spin function for debugging
+        function testSpin() {
+            console.log('🧪 Testing pool announcement and spin...');
+            
+            // Show pool announcement first
+            showPoolAnnouncement('red', 3);
         }
 
-        // Watch for round changes
-        let lastRound = null;
-        function checkForNewRound() {
-            if (gameState && gameState.gameState.currentRound !== lastRound) {
-                if (lastRound !== null) {
-                    resetForNewRound();
-                }
-                lastRound = gameState.gameState.currentRound;
+        // Mouse trail effect
+        let mouseTrail = [];
+        document.addEventListener('mousemove', (e) => {
+            mouseTrail.push({ x: e.clientX, y: e.clientY, time: Date.now() });
+            
+            // Limit trail length
+            if (mouseTrail.length > 10) {
+                mouseTrail.shift();
             }
-        }
+            
+            // Create trail particles occasionally
+            if (Math.random() < 0.1) {
+                createParticle(e.clientX, e.clientY, '#ff0000', 2, 500);
+            }
+        });
 
-        // Initialize the application
-        async function initialize() {
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
             console.log('🎰 Initializing Red or Black Casino...');
             
-            // Initialize WebSocket
-            initializeWebSocket();
+            // Add loading animation
+            document.body.classList.add('loading');
             
-            // Fetch initial game state
-            try {
-                const response = await fetch(`${window.APP_CONFIG.API_URL}/api/status`);
-                const data = await response.json();
-                if (data.success) {
-                    updateGameState(data);
-                }
-            } catch (error) {
-                console.error('Failed to fetch initial game state:', error);
-            }
+            setTimeout(() => {
+                document.body.classList.remove('loading');
+                initializeConnection();
+                
+                // Set initialization flag after a delay to prevent auto-spinning
+                setTimeout(() => {
+                    isInitialized = true;
+                    console.log('✅ App initialization complete - spinning now allowed');
+                }, 2000);
+                
+                // Auto-refresh intervals - reduced frequency to prevent timer conflicts
+                setInterval(fetchParticipants, 5000);
+                setInterval(fetchGameStatus, 5000);
+                
+                console.log('🔥 Red or Black Casino is LIVE!');
+            }, 1000);
+        });
 
-            // Check for new rounds periodically
-            setInterval(checkForNewRound, 1000);
+        // Performance monitoring
+        let lastUpdateTime = Date.now();
+        function checkPerformance() {
+            const now = Date.now();
+            const deltaTime = now - lastUpdateTime;
+            
+            if (deltaTime > 8000) {
+                console.warn('⚠️ Performance warning: No updates received recently');
+                updateConnectionStatus(false);
+            }
+            
+            lastUpdateTime = now;
         }
 
-        // Start the application
-        initialize();
+        setInterval(checkPerformance, 10000);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (socket) {
+                socket.disconnect();
+            }
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        });
+
+        // Handle visibility changes
+        let wasHidden = false;
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('🔴 Page hidden - reducing updates');
+                wasHidden = true;
+                lastVisibilityChange = Date.now();
+                // Reset spinning state when page is hidden to prevent issues on return
+                isSpinning = false;
+                poolAnnounced = false;
+            } else {
+                console.log('🔴 Page visible - resuming full updates');
+                lastVisibilityChange = Date.now();
+                
+                if (wasHidden) {
+                    console.log('🔄 Page was hidden, resetting states and fetching fresh data');
+                    // Reset all states when returning from hidden state
+                    isSpinning = false;
+                    poolAnnounced = false;
+                    
+                    // Close any open modals/overlays
+                    const selectorContainer = document.getElementById('selectorContainer');
+                    const winnerModal = document.getElementById('winnerModal');
+                    const poolModal = document.getElementById('poolModal');
+                    
+                    if (selectorContainer) selectorContainer.style.display = 'none';
+                    if (winnerModal) winnerModal.style.display = 'none';
+                    if (poolModal) poolModal.style.display = 'none';
+                    
+                    wasHidden = false;
+                }
+                
+                // Only fetch data if we're properly initialized and wait a bit to prevent immediate triggering
+                if (isInitialized) {
+                    setTimeout(() => {
+                        if (!document.hidden) { // Double-check we're still visible
+                            fetchGameStatus();
+                            fetchParticipants();
+                        }
+                    }, 1000); // 1 second delay
+                }
+            }
+        });
     </script>
 </body>
 </html>
