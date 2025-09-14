@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red or Black - Neon Casino</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="config.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: radial-gradient(ellipse at center, #1a0000 0%, #000000 70%);
+            color: #fff;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Animated neon grid background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,0,0,0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,0,0,0.2) 1px, transparent 1px);
+            background-size: 40px 40px;
+            animation: gridGlow 3s ease-in-out infinite alternate;
+            z-index: -2;
+        }
+
+        @keyframes gridGlow {
+            0% { opacity: 0.3; background-size: 40px 40px; }
+            100% { opacity: 0.6; background-size: 42px 42px; }
+        }
+
+        /* Floating red particles */
+        .bg-grid::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(2px 2px at 20% 30%, #ff0000, transparent),
+                radial-gradient(2px 2px at 80% 70%, #ff0040, transparent),
+                radial-gradient(1px 1px at 90% 40%, #ff0020, transparent),
+                radial-gradient(1px 1px at 50% 60%, #ff0000, transparent);
+            background-size: 200% 100%;
+            animation: particles 8s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes particles {
+            0%, 100% { transform: translateY(0); opacity: 0.8; }
+            50% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        /* Red neon glow utility */
+        .neon-red {
+            color: #ff0000;
+            text-shadow: 
+                0 0 5px #ff0000,
+                0 0 10px #ff0000,
+                0 0 15px #ff0000,
+                0 0 20px #ff0000,
+                0 0 30px #ff0000;
+        }
+
+        .neon-red-border {
+            border: 2px solid #ff0000;
+            box-shadow: 
+                0 0 10px #ff0000,
+                0 0 20px #ff0000,
+                0 0 30px #ff0000,
+                inset 0 0 10px rgba(255,0,0,0.1);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #000000 0%, #330000 50%, #000000 100%);
+            border-bottom: 3px solid #ff0000;
+            box-shadow: 0 3px 20px #ff0000;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.1), transparent);
+            animation: headerScan 4s linear infinite;
+        }
+
+        @keyframes headerScan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .logo {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #ff4444;
+            text-shadow: 
+                0 0 2px #ff0000,
+                0 0 4px #ff0000;
+            animation: logoFire 2s ease-in-out infinite alternate;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes logoFire {
+            from { 
+                text-shadow: 
+                    0 0 2px #ff0000,
+                    0 0 4px #ff0000;
+            }
+            to { 
+                text-shadow: 
+                    0 0 3px #ff0000,
+                    0 0 6px #ff0000;
+            }
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: #cc0000;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 450px;
+            gap: 40px;
+            min-height: calc(100vh - 200px);
+        }
+
+        /* Game area */
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* Timer section */
+        .timer-section {
+            background: linear-gradient(135deg, #000000, #1a0000, #000000);
+            border: 3px solid #ff0000;
+            border-radius: 25px;
+            padding: 50px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 0 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.1);
+        }
+
+        .timer-section::before {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
+            background: conic-gradient(transparent, rgba(255,0,0,0.3), transparent, rgba(255,0,0,0.1));
+            animation: timerRotate 4s linear infinite;
+        }
+
+        @keyframes timerRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .timer-display {
+            font-size: 8rem;
+            font-weight: 900;
+            color: #ff4444;
+            text-shadow: 
+                0 0 3px #ff0000,
+                0 0 6px #ff0000;
+            position: relative;
+            z-index: 1;
+            animation: timerPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes timerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .round-info {
+            font-size: 2rem;
+            margin-top: 20px;
+            color: #ff0000;
+            text-shadow: 0 0 15px #ff0000;
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+        }
+
+        .status {
+            font-size: 2.2rem;
+            margin-top: 15px;
+            font-weight: 900;
+            position: relative;
+            z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Voting section */
+        .voting-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .vote-button {
+            padding: 80px 50px;
+            border: 4px solid;
+            border-radius: 25px;
+            font-family: 'Orbitron', monospace;
+            font-size: 3.5rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        .vote-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .vote-button:hover::before {
+            left: 100%;
+        }
+
+        .red-button {
+            background: linear-gradient(135deg, #ff0000, #cc0000, #ff0000);
+            color: #fff;
+            border-color: #ff0000;
+            box-shadow: 
+                0 0 30px #ff0000,
+                0 0 60px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.2);
+        }
+
+        .red-button:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 60px #ff0000,
+                0 0 80px #ff0000,
+                inset 0 0 40px rgba(255,0,0,0.3);
+        }
+
+        .red-button:active {
+            transform: translateY(-4px) scale(0.98);
+        }
+
+        .black-button {
+            background: linear-gradient(135deg, #000000, #1a0000, #000000);
+            color: #ff0000;
+            border-color: #ff0000;
+            box-shadow: 
+                0 0 30px #ff0000,
+                0 0 60px rgba(255,0,0,0.5),
+                inset 0 0 30px rgba(255,0,0,0.1);
+        }
+
+        .black-button:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 
+                0 20px 60px #ff0000,
+                0 0 80px #ff0000,
+                inset 0 0 40px rgba(255,0,0,0.2);
+            color: #fff;
+            background: linear-gradient(135deg, #1a0000, #330000, #1a0000);
+        }
+
+        .black-button:active {
+            transform: translateY(-4px) scale(0.98);
+        }
+
+        .vote-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            filter: grayscale(50%);
+        }
+
+        /* Vote counts */
+        .vote-counts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .vote-count {
+            background: linear-gradient(135deg, #000000, #1a0000);
+            border: 3px solid #ff0000;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 
+                0 0 25px #ff0000,
+                inset 0 0 25px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vote-count::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.2), transparent);
+            animation: countScan 3s ease-in-out infinite;
+        }
+
+        @keyframes countScan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .count-number {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 15px;
+            color: #ff0000;
+            text-shadow: 
+                0 0 15px #ff0000,
+                0 0 30px #ff0000;
+            position: relative;
+            z-index: 1;
+        }
+
+        .count-label {
+            font-size: 1.4rem;
+            color: #cc0000;
+            font-weight: 700;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Spinning wheel overlay */
+        .wheel-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        }
+        
+        .wheel-overlay-content {
+            position: relative;
+            text-align: center;
+        }
+        
+        .close-wheel-btn {
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 3px solid #ff0000;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10000;
+            box-shadow: 0 0 20px #ff0000;
+            transition: all 0.3s ease;
+        }
+        
+        .close-wheel-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px #ff0000;
+        }
+        
+        .wheel-info {
+            margin-top: 30px;
+            color: #fff;
+        }
+        
+        .wheel-info h3 {
+            font-size: 2rem;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            margin-bottom: 10px;
+        }
+        
+        .wheel-info p {
+            font-size: 1.2rem;
+            color: #cc0000;
+            text-shadow: 0 0 10px #ff0000;
+        }
+
+        .wheel {
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #ff0000 0deg 180deg,
+                #000000 180deg 360deg
+            );
+            position: relative;
+            border: 12px solid #ff0000;
+            box-shadow: 
+                0 0 100px #ff0000,
+                0 0 200px rgba(255,0,0,0.7),
+                inset 0 0 60px rgba(255,0,0,0.4);
+        }
+
+        .wheel-segments {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .wheel-segment {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 50%;
+            height: 50%;
+            transform-origin: 0 100%;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .wheel-segment.red {
+            background: linear-gradient(45deg, #ff0000, #cc0000);
+        }
+
+        .wheel-segment.black {
+            background: linear-gradient(45deg, #000000, #1a0000);
+        }
+
+        .wheel::after {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #ff0000;
+            z-index: 10;
+            filter: drop-shadow(0 0 10px #ff0000);
+        }
+
+        .wheel.spinning {
+            animation: spinWheel 4s cubic-bezier(0.23, 1, 0.320, 1) forwards;
+        }
+
+        @keyframes spinWheel {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(2160deg); }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(135deg, #000000, #1a0000, #000000);
+            border: 3px solid #ff0000;
+            border-radius: 25px;
+            padding: 30px;
+            height: fit-content;
+            box-shadow: 
+                0 0 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ff0000, transparent);
+            animation: sidebarScan 2s ease-in-out infinite;
+        }
+
+        @keyframes sidebarScan {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .sidebar-section {
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sidebar-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ff0000;
+            text-shadow: 0 0 15px #ff0000;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Wallet section */
+        .wallet-section input {
+            width: 100%;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #000000, #1a0000);
+            border: 2px solid #ff0000;
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            box-shadow: 
+                0 0 15px rgba(255,0,0,0.3),
+                inset 0 0 15px rgba(255,0,0,0.1);
+        }
+
+        .wallet-section input::placeholder {
+            color: #cc0000;
+        }
+
+        .wallet-section input:focus {
+            outline: none;
+            box-shadow: 
+                0 0 25px #ff0000,
+                inset 0 0 25px rgba(255,0,0,0.2);
+        }
+
+        .verify-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff0000, #cc0000, #ff0000);
+            border: 3px solid #ff0000;
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 
+                0 0 20px #ff0000,
+                inset 0 0 20px rgba(255,0,0,0.2);
+        }
+
+        .verify-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 10px 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.3);
+        }
+
+        /* Voters list */
+        .voters-list {
+            max-height: 350px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .voter-item {
+            background: linear-gradient(135deg, #000000, #1a0000);
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #ff0000;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 
+                0 0 10px rgba(255,0,0,0.3),
+                inset 0 0 10px rgba(255,0,0,0.1);
+            transition: all 0.3s ease;
+            min-height: 50px;
+            gap: 10px;
+        }
+
+        .voter-item:hover {
+            transform: translateX(5px);
+            box-shadow: 
+                0 0 20px rgba(255,0,0,0.5),
+                inset 0 0 20px rgba(255,0,0,0.2);
+        }
+
+        .voter-address {
+            font-family: monospace;
+            color: #fff;
+            text-shadow: 0 0 5px #ff0000;
+            flex: 1;
+            min-width: 0;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: calc(100% - 80px);
+        }
+
+        .voter-vote {
+            font-weight: 900;
+            font-size: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            border: 1px solid #ff0000;
+            flex-shrink: 0;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .voter-vote.red {
+            background: #ff0000;
+            color: #fff;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        .voter-vote.black {
+            background: #000000;
+            color: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        /* Stats section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .expanded-winner {
+            grid-column: 1 / -1;
+            min-height: 80px;
+            padding: 25px;
+            background: linear-gradient(135deg, #1a0000, #330000, #1a0000);
+            border: 3px solid #ff0000;
+            box-shadow: 
+                0 0 30px #ff0000,
+                0 0 60px rgba(255,0,0,0.3),
+                inset 0 0 30px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .expanded-winner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.2), transparent);
+            animation: winnerScan 3s ease-in-out infinite;
+        }
+        
+        @keyframes winnerScan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .expanded-winner .stat-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ff0000;
+            text-shadow: 
+                0 0 20px #ff0000,
+                0 0 40px #ff0000;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .expanded-winner .stat-label {
+            font-size: 1.2rem;
+            color: #cc0000;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .winner-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .winner-info {
+            flex: 1;
+        }
+        
+        .copy-winner-btn {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 2px solid #ff0000;
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 0 15px rgba(255,0,0,0.3),
+                inset 0 0 15px rgba(255,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            min-width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .copy-winner-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 
+                0 8px 25px rgba(255,0,0,0.5),
+                0 0 30px rgba(255,0,0,0.4),
+                inset 0 0 20px rgba(255,0,0,0.2);
+            background: linear-gradient(135deg, #ff3333, #ff0000);
+        }
+        
+        .copy-winner-btn:active {
+            transform: translateY(0) scale(0.95);
+        }
+        
+        .copy-winner-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+        
+        .copy-winner-btn:hover::before {
+            left: 100%;
+        }
+        
+        .copy-winner-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, #000000, #1a0000);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid #ff0000;
+            box-shadow: 
+                0 0 15px rgba(255,0,0,0.3),
+                inset 0 0 15px rgba(255,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                0 0 25px rgba(255,0,0,0.5),
+                inset 0 0 25px rgba(255,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ff0000;
+            display: block;
+            text-shadow: 0 0 15px #ff0000;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #cc0000;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Winner announcement */
+        .winner-announcement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #000000, #330000, #000000);
+            border: 5px solid #ff0000;
+            border-radius: 30px;
+            padding: 60px;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+            box-shadow: 
+                0 0 100px #ff0000,
+                0 0 200px rgba(255,0,0,0.5),
+                inset 0 0 50px rgba(255,0,0,0.2);
+            animation: winnerGlow 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes winnerGlow {
+            from { box-shadow: 0 0 100px #ff0000, 0 0 200px rgba(255,0,0,0.5), inset 0 0 50px rgba(255,0,0,0.2); }
+            to { box-shadow: 0 0 120px #ff0000, 0 0 240px rgba(255,0,0,0.7), inset 0 0 60px rgba(255,0,0,0.3); }
+        }
+
+        .winner-text {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 30px;
+            color: #ff0000;
+            text-shadow: 
+                0 0 20px #ff0000,
+                0 0 40px #ff0000;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .winner-address {
+            font-family: monospace;
+            font-size: 1.2rem;
+            color: #fff;
+            text-shadow: 0 0 15px #ff0000;
+            margin-bottom: 30px;
+            word-break: break-all;
+            background: rgba(255,0,0,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ff0000;
+        }
+
+        .close-winner {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border: 3px solid #ff0000;
+            padding: 20px 40px;
+            border-radius: 15px;
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 18px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 
+                0 0 20px #ff0000,
+                inset 0 0 20px rgba(255,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .close-winner:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                0 0 30px #ff0000,
+                inset 0 0 30px rgba(255,0,0,0.3);
+        }
+
+        /* Connection status */
+        .connection-status {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 900;
+            z-index: 100;
+            border: 2px solid;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .connected {
+            background: linear-gradient(135deg, #000000, #1a0000);
+            color: #ff0000;
+            border-color: #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+        }
+
+        .disconnected {
+            background: linear-gradient(135deg, #330000, #660000);
+            color: #fff;
+            border-color: #ff0000;
+            box-shadow: 0 0 20px #ff0000;
+            animation: disconnectedBlink 1s ease-in-out infinite;
+        }
+
+        @keyframes disconnectedBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000000;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border-radius: 6px;
+            border: 2px solid #000000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            box-shadow: 0 0 20px #ff0000;
+        }
+
+        /* Pulse animation */
+        .pulse {
+            animation: pulseRed 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseRed {
+            0%, 100% { 
+                text-shadow: 
+                    0 0 10px #ff0000,
+                    0 0 20px #ff0000,
+                    0 0 30px #ff0000;
+            }
+            50% { 
+                text-shadow: 
+                    0 0 20px #ff0000,
+                    0 0 30px #ff0000,
+                    0 0 40px #ff0000,
+                    0 0 50px #ff0000;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 3rem;
+            }
+            
+            .timer-display {
+                font-size: 5rem;
+            }
+            
+            .vote-button {
+                padding: 50px 30px;
+                font-size: 2.5rem;
+            }
+            
+            .voting-section {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 20px;
+                gap: 20px;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            animation: loadingGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes loadingGlow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <div class="connection-status" id="connectionStatus">CONNECTING...</div>
+
+    <header class="header">
+        <h1 class="logo">RED OR BLACK</h1>
+        <p class="subtitle">Ultimate Neon Casino • Live Gambling • High Stakes</p>
+    </header>
+
+    <div class="container">
+        <div class="game-area">
+            <!-- Timer Section -->
+            <div class="timer-section">
+                <div class="timer-display" id="timer">00:00</div>
+                <div class="round-info">
+                    Round <span id="currentRound">1</span>
+                </div>
+                <div class="status neon-red" id="gameStatus">LOADING...</div>
+            </div>
+
+            <!-- Voting Section -->
+            <div class="voting-section" id="votingSection">
+                <button class="vote-button red-button" id="redButton" onclick="vote('red')" disabled>
+                    RED
+                </button>
+                <button class="vote-button black-button" id="blackButton" onclick="vote('black')" disabled>
+                    BLACK
+                </button>
+            </div>
+
+            <!-- Vote Counts -->
+            <div class="vote-counts">
+                <div class="vote-count">
+                    <div class="count-number" id="redCount">0</div>
+                    <div class="count-label">RED VOTES</div>
+                </div>
+                <div class="vote-count">
+                    <div class="count-number" id="blackCount">0</div>
+                    <div class="count-label">BLACK VOTES</div>
+                </div>
+            </div>
+
+            <!-- Spinning Wheel Overlay -->
+            <div class="wheel-container" id="wheelContainer">
+                <div class="wheel-overlay-content">
+                    <button class="close-wheel-btn" id="closeWheelBtn" onclick="closeWheelOverlay()">✕</button>
+                    <div class="wheel" id="wheel">
+                        <div class="wheel-segments" id="wheelSegments"></div>
+                    </div>
+                    <div class="wheel-info" id="wheelInfo">
+                        <h3>Winning Pool</h3>
+                        <p id="eligibleVotersCount">0 eligible voters</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Wallet Verification -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Wallet Verification</h3>
+                <div class="wallet-section">
+                    <input type="text" id="walletInput" placeholder="Enter Solana wallet address..." />
+                    <button class="verify-btn" onclick="verifyWallet()">VERIFY WALLET</button>
+                    <div id="verificationStatus" style="margin-top: 15px; font-size: 14px;"></div>
+                </div>
+            </div>
+
+            <!-- Live Voters -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Live Voters</h3>
+                <div class="voters-list" id="votersList">
+                    <div style="text-align: center; color: #cc0000; padding: 30px; border: 1px dashed #ff0000; border-radius: 10px;">
+                        No voters yet...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Stats -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Game Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalPlayers">0</span>
+                        <span class="stat-label">Total Players</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalRounds">0</span>
+                        <span class="stat-label">Rounds Played</span>
+                    </div>
+                    <div class="stat-item expanded-winner">
+                        <div class="winner-content">
+                            <div class="winner-info">
+                                <span class="stat-value" id="lastWinner">None</span>
+                                <span class="stat-label">Latest Winner</span>
+                            </div>
+                            <button class="copy-winner-btn" id="copyWinnerBtn" onclick="copyWinnerAddress()" title="Copy winner address">
+                                📋
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winner Announcement Modal -->
+    <div class="winner-announcement" id="winnerModal">
+        <div class="winner-text">🎉 WINNER! 🎉</div>
+        <div class="winner-address" id="winnerAddress"></div>
+        <div style="margin: 25px 0; font-size: 1.5rem; color: #ff0000; text-shadow: 0 0 15px #ff0000;">
+            Prize: <span id="prizeAmount">0 SOL</span>
+        </div>
+        <button class="close-winner" onclick="closeWinnerModal()">CONTINUE</button>
+    </div>
+
+    <script>
+        // Global variables
+        let socket = null;
+        let isVerified = false;
+        let hasVoted = false;
+        let currentRoundNumber = 1;
+        let gameState = null;
+        let clientTimeLeft = 0;
+        let timerInterval = null;
+
+        // Initialize connection
+        function initializeConnection() {
+            // Use configuration
+            socket = io(window.APP_CONFIG.WS_URL);
+            
+            socket.on('connect', () => {
+                console.log('🔴 Connected to Red or Black Casino');
+                updateConnectionStatus(true);
+                createConnectionParticles();
+            });
+
+            socket.on('disconnect', () => {
+                console.log('⚫ Disconnected from server');
+                updateConnectionStatus(false);
+            });
+
+            socket.on('gameUpdate', (data) => {
+                console.log('🎰 Game update received:', data);
+                updateGameUI(data);
+                createUpdateParticles();
+            });
+
+            // Initial data request
+            fetchGameStatus();
+            fetchParticipants();
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = '🔴 CONNECTED';
+                status.className = 'connection-status connected';
+            } else {
+                status.textContent = '⚫ DISCONNECTED';
+                status.className = 'connection-status disconnected';
+            }
+        }
+
+        // Fetch game status from API
+        async function fetchGameStatus() {
+            try {
+                const response = await fetch(`${window.APP_CONFIG.API_URL}/api/status`);
+                const data = await response.json();
+                if (data.success) {
+                    updateGameUI(data);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching game status:', error);
+            }
+        }
+
+        // Fetch participants
+        async function fetchParticipants() {
+            try {
+                const response = await fetch(`${window.APP_CONFIG.API_URL}/api/participants`);
+                const data = await response.json();
+                if (data.success) {
+                    updateVotersList(data.recentVotes);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching participants:', error);
+            }
+        }
+
+        // Update the entire UI with game data
+        function updateGameUI(data) {
+            gameState = data;
+            
+            if (data.gameState) {
+                // Update round info
+                currentRoundNumber = data.gameState.currentRound;
+                document.getElementById('currentRound').textContent = currentRoundNumber;
+                
+                // Update timer - simple approach
+                const serverTimeLeft = data.gameState.timeLeft || 0;
+                const fallbackTime = data.config?.roundDuration ? Math.floor(data.config.roundDuration / 1000) : 300;
+                
+                // Use server time if reasonable, otherwise use fallback
+                const timeToUse = serverTimeLeft > 0 ? serverTimeLeft : fallbackTime;
+                
+                updateTimer(timeToUse);
+                
+                // Update stats
+                document.getElementById('totalRounds').textContent = data.gameState.totalRoundsPlayed;
+                
+                if (data.gameState.lastWinner) {
+                    const winnerAddress = data.gameState.lastWinner;
+                    const shortAddress = winnerAddress.length > 16 ? 
+                        `${winnerAddress.substring(0, 8)}...${winnerAddress.substring(winnerAddress.length - 6)}` : 
+                        winnerAddress;
+                    document.getElementById('lastWinner').textContent = shortAddress;
+                    document.getElementById('lastWinner').title = `Full address: ${winnerAddress}`;
+                    
+                    // Enable copy button and store full address
+                    const copyBtn = document.getElementById('copyWinnerBtn');
+                    copyBtn.disabled = false;
+                    copyBtn.setAttribute('data-address', winnerAddress);
+                    copyBtn.title = 'Copy winner address to clipboard';
+                } else {
+                    document.getElementById('lastWinner').textContent = 'No Winner Yet';
+                    document.getElementById('lastWinner').title = 'No winner in the latest round';
+                    
+                    // Disable copy button
+                    const copyBtn = document.getElementById('copyWinnerBtn');
+                    copyBtn.disabled = true;
+                    copyBtn.removeAttribute('data-address');
+                    copyBtn.title = 'No winner to copy';
+                }
+            }
+
+            if (data.roundData) {
+                // Update vote counts with animation
+                animateCountUpdate('redCount', data.roundData.votes.red || 0);
+                animateCountUpdate('blackCount', data.roundData.votes.black || 0);
+                document.getElementById('totalPlayers').textContent = data.roundData.participants || 0;
+                
+                // Update game status and UI based on round status
+                updateGameStatus(data.roundData.status, data.roundData);
+            }
+
+            // Fetch updated participants
+            fetchParticipants();
+        }
+
+        // Animate count updates
+        function animateCountUpdate(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            const currentValue = parseInt(element.textContent) || 0;
+            
+            if (currentValue !== newValue) {
+                element.style.transform = 'scale(1.2)';
+                element.style.transition = 'transform 0.3s ease';
+                
+                setTimeout(() => {
+                    element.textContent = newValue;
+                    element.style.transform = 'scale(1)';
+                    createVoteParticles(element);
+                }, 150);
+            }
+        }
+
+        // Update game status
+        function updateGameStatus(status, roundData) {
+            const statusElement = document.getElementById('gameStatus');
+            const votingSection = document.getElementById('votingSection');
+            const wheelContainer = document.getElementById('wheelContainer');
+            
+            switch (status) {
+                case 'voting':
+                    statusElement.innerHTML = '🗳️ VOTING ACTIVE';
+                    statusElement.className = 'status neon-red pulse';
+                    votingSection.style.display = 'grid';
+                    wheelContainer.style.display = 'none';
+                    enableVoting();
+                    break;
+                    
+                case 'spinning':
+                    const winningColor = gameState?.roundData?.winningColor;
+                    const eligibleVotes = gameState?.roundData?.recentVotes?.filter(vote => vote.color === winningColor) || [];
+                    
+                    statusElement.innerHTML = `🎰 WHEEL SPINNING...<br><small>Winning Color: ${winningColor?.toUpperCase() || 'SELECTING...'}<br>Eligible Voters: ${eligibleVotes.length}</small>`;
+                    statusElement.className = 'status neon-red pulse';
+                    votingSection.style.display = 'none';
+                    wheelContainer.style.display = 'flex'; // Show as overlay
+                    disableVoting();
+                    
+                    // Create wheel segments based on winning color voters only
+                    if (gameState && gameState.roundData && gameState.roundData.recentVotes) {
+                        createWheelSegments(gameState.roundData.recentVotes, winningColor);
+                    } else {
+                        createWheelSegments([], null);
+                    }
+                    
+                    startSpinAnimation();
+                    break;
+                    
+                case 'completed':
+                    statusElement.innerHTML = '✅ ROUND COMPLETE';
+                    statusElement.className = 'status neon-red';
+                    votingSection.style.display = 'grid';
+                    wheelContainer.style.display = 'none';
+                    disableVoting();
+                    
+                    if (roundData.winner) {
+                        setTimeout(() => {
+                            showWinner(roundData.winner, roundData.prizeAmount, roundData.winningColor);
+                        }, 1000);
+                    }
+                    break;
+                    
+                default:
+                    statusElement.innerHTML = '⏳ PREPARING ROUND...';
+                    statusElement.className = 'status neon-red loading';
+                    disableVoting();
+            }
+        }
+
+        // Simple timer update
+        function updateTimer(timeLeft) {
+            console.log('🕐 Timer update:', timeLeft, 'seconds');
+            
+            // Clear existing timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // Set new time
+            clientTimeLeft = Math.max(0, timeLeft);
+            
+            // Start countdown if time > 0
+            if (clientTimeLeft > 0) {
+                timerInterval = setInterval(() => {
+                    clientTimeLeft = Math.max(0, clientTimeLeft - 1);
+                    displayTimer(clientTimeLeft);
+                }, 1000);
+            }
+            
+            // Display current time
+            displayTimer(clientTimeLeft);
+        }
+        
+        // Display timer with effects
+        function displayTimer(timeLeft) {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            const timerElement = document.getElementById('timer');
+            
+            timerElement.textContent = display;
+            
+            if (timeLeft <= 10 && timeLeft > 0) {
+                timerElement.classList.add('pulse');
+                timerElement.style.color = '#ff4444';
+                
+                // Create urgency particles
+                if (timeLeft <= 5) {
+                    createUrgencyParticles();
+                }
+            } else {
+                timerElement.classList.remove('pulse');
+                timerElement.style.color = '#ff4444';
+            }
+        }
+
+        // Wallet verification with enhanced feedback
+        async function verifyWallet() {
+            const walletAddress = document.getElementById('walletInput').value.trim();
+            const statusDiv = document.getElementById('verificationStatus');
+            const verifyBtn = document.querySelector('.verify-btn');
+            
+            if (!walletAddress) {
+                statusDiv.innerHTML = '<span style="color: #ff0000; text-shadow: 0 0 10px #ff0000;">⚠️ Please enter wallet address</span>';
+                return;
+            }
+            
+            verifyBtn.textContent = 'VERIFYING...';
+            verifyBtn.style.opacity = '0.7';
+            statusDiv.innerHTML = '<span style="color: #ff0000; text-shadow: 0 0 10px #ff0000;">🔍 Checking token balance...</span>';
+            
+            try {
+                const response = await fetch(`${window.APP_CONFIG.API_URL}/api/verify-wallet`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ walletAddress })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    isVerified = true;
+                    statusDiv.innerHTML = `<span style="color: #ff0000; text-shadow: 0 0 15px #ff0000;">✅ VERIFIED! Balance: ${Math.floor(data.balance / 1000000)}M tokens</span>`;
+                    verifyBtn.textContent = 'WALLET VERIFIED';
+                    verifyBtn.style.background = 'linear-gradient(135deg, #ff0000, #cc0000)';
+                    enableVoting();
+                    createVerificationParticles();
+                } else {
+                    isVerified = false;
+                    statusDiv.innerHTML = `<span style="color: #ff0000; text-shadow: 0 0 15px #ff0000;">❌ ${data.error}</span>`;
+                    verifyBtn.textContent = 'VERIFICATION FAILED';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<span style="color: #ff0000; text-shadow: 0 0 15px #ff0000;">❌ Network error - Try again</span>';
+                console.error('Verification error:', error);
+            }
+            
+            verifyBtn.style.opacity = '1';
+            setTimeout(() => {
+                if (verifyBtn.textContent !== 'WALLET VERIFIED') {
+                    verifyBtn.textContent = 'VERIFY WALLET';
+                }
+            }, 3000);
+        }
+
+        // Enhanced voting with explosive effects
+        async function vote(color) {
+            if (!isVerified) {
+                alert('🚫 Please verify your wallet first!');
+                return;
+            }
+            
+            const walletAddress = document.getElementById('walletInput').value.trim();
+            const button = color === 'red' ? document.getElementById('redButton') : document.getElementById('blackButton');
+            
+            // Pre-vote animation
+            button.style.transform = 'scale(0.95)';
+            createVoteExplosion(button, color);
+            
+            try {
+                const response = await fetch(`${window.APP_CONFIG.API_URL}/api/vote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ walletAddress, color })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    hasVoted = true;
+                    disableVoting();
+                    
+                    // Success animation
+                    button.style.transform = 'scale(1.1)';
+                    button.style.boxShadow = `0 0 80px #ff0000, 0 0 120px #ff0000`;
+                    
+                    setTimeout(() => {
+                        button.style.transform = 'scale(1)';
+                        button.style.boxShadow = '';
+                    }, 500);
+                    
+                    // Play success sound
+                    playSound('vote');
+                    
+                    console.log('🎯 Vote cast successfully:', data);
+                } else {
+                    alert(`❌ Vote failed: ${data.error}`);
+                    button.style.transform = 'scale(1)';
+                }
+            } catch (error) {
+                alert('❌ Network error. Please try again.');
+                console.error('Vote error:', error);
+                button.style.transform = 'scale(1)';
+            }
+        }
+
+        // Enable/disable voting buttons
+        function enableVoting() {
+            if (isVerified && !hasVoted && gameState?.roundData?.status === 'voting') {
+                const redBtn = document.getElementById('redButton');
+                const blackBtn = document.getElementById('blackButton');
+                
+                redBtn.disabled = false;
+                blackBtn.disabled = false;
+                
+                // Add pulsing effect when enabled
+                redBtn.style.animation = 'pulseRed 2s ease-in-out infinite';
+                blackBtn.style.animation = 'pulseRed 2s ease-in-out infinite';
+            }
+        }
+
+        function disableVoting() {
+            const redBtn = document.getElementById('redButton');
+            const blackBtn = document.getElementById('blackButton');
+            
+            redBtn.disabled = true;
+            blackBtn.disabled = true;
+            redBtn.style.animation = 'none';
+            blackBtn.style.animation = 'none';
+        }
+
+        // Create wheel segments based on eligible voters (winning color only)
+        function createWheelSegments(votes, winningColor) {
+            const segmentsContainer = document.getElementById('wheelSegments');
+            segmentsContainer.innerHTML = '';
+            
+            if (!votes || votes.length === 0) {
+                // Default 2-segment wheel showing both colors
+                const redSegment = document.createElement('div');
+                redSegment.className = 'wheel-segment red';
+                redSegment.style.transform = 'rotate(0deg)';
+                redSegment.style.clipPath = 'polygon(0 0, 100% 0, 50% 100%)';
+                redSegment.title = 'RED - No voters';
+                
+                const blackSegment = document.createElement('div');
+                blackSegment.className = 'wheel-segment black';
+                blackSegment.style.transform = 'rotate(180deg)';
+                blackSegment.style.clipPath = 'polygon(0 0, 100% 0, 50% 100%)';
+                blackSegment.title = 'BLACK - No voters';
+                
+                segmentsContainer.appendChild(redSegment);
+                segmentsContainer.appendChild(blackSegment);
+                
+                // Update info
+                document.getElementById('eligibleVotersCount').textContent = '0 eligible voters';
+                return;
+            }
+            
+            // Filter to only winning color voters
+            const eligibleVotes = votes.filter(vote => vote.color === winningColor);
+            
+            if (eligibleVotes.length === 0) {
+                // No eligible voters - show both colors with "no voters" message
+                const redSegment = document.createElement('div');
+                redSegment.className = 'wheel-segment red';
+                redSegment.style.transform = 'rotate(0deg)';
+                redSegment.style.clipPath = 'polygon(0 0, 100% 0, 50% 100%)';
+                redSegment.title = `RED - No voters (Winning Color: ${winningColor?.toUpperCase()})`;
+                
+                const blackSegment = document.createElement('div');
+                blackSegment.className = 'wheel-segment black';
+                blackSegment.style.transform = 'rotate(180deg)';
+                blackSegment.style.clipPath = 'polygon(0 0, 100% 0, 50% 100%)';
+                blackSegment.title = `BLACK - No voters (Winning Color: ${winningColor?.toUpperCase()})`;
+                
+                segmentsContainer.appendChild(redSegment);
+                segmentsContainer.appendChild(blackSegment);
+                
+                // Update info
+                document.getElementById('eligibleVotersCount').textContent = '0 eligible voters';
+                return;
+            }
+            
+            // Update info
+            document.getElementById('eligibleVotersCount').textContent = `${eligibleVotes.length} eligible voters`;
+            
+            // Create segments for each eligible voter with better visual representation
+            const segmentAngle = 360 / eligibleVotes.length;
+            
+            eligibleVotes.forEach((vote, index) => {
+                const segment = document.createElement('div');
+                segment.className = `wheel-segment ${vote.color}`;
+                segment.style.transform = `rotate(${index * segmentAngle}deg)`;
+                segment.style.clipPath = `polygon(0 0, 100% 0, 50% 100%)`;
+                
+                // Add address text on segment
+                const addressText = document.createElement('div');
+                addressText.style.position = 'absolute';
+                addressText.style.top = '20%';
+                addressText.style.left = '50%';
+                addressText.style.transform = 'translateX(-50%)';
+                addressText.style.fontSize = '10px';
+                addressText.style.fontWeight = 'bold';
+                addressText.style.color = '#fff';
+                addressText.style.textShadow = '0 0 5px #000';
+                addressText.style.whiteSpace = 'nowrap';
+                addressText.textContent = `${vote.walletAddress.substring(0, 6)}...${vote.walletAddress.substring(-4)}`;
+                
+                segment.appendChild(addressText);
+                
+                // Add special styling for potential winner
+                if (index === 0) {
+                    segment.style.border = '3px solid #ffff00';
+                    segment.style.boxShadow = '0 0 20px #ffff00';
+                }
+                
+                segment.title = `Address: ${vote.walletAddress}\nColor: ${vote.color}\nEligible for win`;
+                
+                segmentsContainer.appendChild(segment);
+            });
+            
+            // Add a center indicator showing winning color
+            const centerIndicator = document.createElement('div');
+            centerIndicator.style.position = 'absolute';
+            centerIndicator.style.top = '50%';
+            centerIndicator.style.left = '50%';
+            centerIndicator.style.transform = 'translate(-50%, -50%)';
+            centerIndicator.style.width = '80px';
+            centerIndicator.style.height = '80px';
+            centerIndicator.style.borderRadius = '50%';
+            centerIndicator.style.background = winningColor === 'red' ? '#ff0000' : '#000000';
+            centerIndicator.style.border = '4px solid #ffff00';
+            centerIndicator.style.display = 'flex';
+            centerIndicator.style.alignItems = 'center';
+            centerIndicator.style.justifyContent = 'center';
+            centerIndicator.style.fontSize = '14px';
+            centerIndicator.style.fontWeight = 'bold';
+            centerIndicator.style.color = '#fff';
+            centerIndicator.style.textShadow = '0 0 10px #000';
+            centerIndicator.textContent = winningColor?.toUpperCase() || '?';
+            centerIndicator.title = `Winning Color: ${winningColor?.toUpperCase()}`;
+            
+            segmentsContainer.appendChild(centerIndicator);
+        }
+
+        // Enhanced spin animation
+        function startSpinAnimation() {
+            const wheel = document.getElementById('wheel');
+            wheel.classList.add('spinning');
+            
+            // Create spin particles
+            createSpinParticles();
+            
+            // Play spin sound
+            playSound('spin');
+            
+            // Sync with server timing (3 seconds)
+            setTimeout(() => {
+                wheel.classList.remove('spinning');
+                playSound('spinStop');
+                
+                // Add landing effect
+                addLandingEffect();
+            }, 3000);
+        }
+        
+        // Add landing effect when wheel stops
+        function addLandingEffect() {
+            const wheel = document.getElementById('wheel');
+            wheel.style.transform = 'scale(1.1)';
+            wheel.style.boxShadow = '0 0 100px #ff0000, 0 0 200px rgba(255,0,0,0.8)';
+            
+            setTimeout(() => {
+                wheel.style.transform = 'scale(1)';
+                wheel.style.boxShadow = '';
+            }, 500);
+        }
+
+        // Update voters list with enhanced styling
+        function updateVotersList(votes) {
+            const votersList = document.getElementById('votersList');
+            
+            if (!votes || votes.length === 0) {
+                votersList.innerHTML = `
+                    <div style="text-align: center; color: #cc0000; padding: 30px; border: 1px dashed #ff0000; border-radius: 10px; background: rgba(255,0,0,0.05);">
+                        <div style="font-size: 1.5rem; margin-bottom: 10px;">⏳</div>
+                        Waiting for first voter...
+                    </div>
+                `;
+                return;
+            }
+            
+            votersList.innerHTML = votes.map(vote => {
+                const address = vote.walletAddress;
+                const shortAddress = address.length > 16 ? 
+                    `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : 
+                    address;
+                
+                return `
+                    <div class="voter-item" title="Full address: ${address}">
+                        <span class="voter-address">${shortAddress}</span>
+                        <span class="voter-vote ${vote.color}">${vote.color.toUpperCase()}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Enhanced winner modal
+        function showWinner(winnerAddress, prizeAmount, winningColor) {
+            const modal = document.getElementById('winnerModal');
+            const addressElement = document.getElementById('winnerAddress');
+            const prizeElement = document.getElementById('prizeAmount');
+            
+            addressElement.textContent = winnerAddress ? 
+                `${winnerAddress.substring(0, 12)}...${winnerAddress.substring(-8)}` : 
+                'No Winner This Round';
+            
+            prizeElement.textContent = prizeAmount ? `${prizeAmount} SOL` : '0 SOL';
+            
+            modal.style.display = 'block';
+            
+            // Create winner explosion
+            createWinnerExplosion();
+            
+            // Play winner sound
+            playSound('win');
+            
+            // Auto close after 12 seconds
+            setTimeout(() => {
+                closeWinnerModal();
+            }, 12000);
+        }
+
+        // Close winner modal
+        function closeWinnerModal() {
+            document.getElementById('winnerModal').style.display = 'none';
+            hasVoted = false; // Reset for next round
+            enableVoting();
+        }
+
+        // Close wheel overlay
+        function closeWheelOverlay() {
+            const wheelContainer = document.getElementById('wheelContainer');
+            wheelContainer.style.display = 'none';
+        }
+
+        // Copy winner address to clipboard
+        async function copyWinnerAddress() {
+            const copyBtn = document.getElementById('copyWinnerBtn');
+            const address = copyBtn.getAttribute('data-address');
+            
+            if (!address) {
+                console.log('❌ No winner address to copy');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(address);
+                
+                // Visual feedback
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅';
+                copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
+                copyBtn.style.boxShadow = '0 0 20px #00ff00';
+                
+                // Create success particles
+                createCopySuccessParticles(copyBtn);
+                
+                // Play success sound
+                playSound('vote');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = 'linear-gradient(135deg, #ff0000, #cc0000)';
+                    copyBtn.style.boxShadow = '0 0 15px rgba(255,0,0,0.3), inset 0 0 15px rgba(255,0,0,0.1)';
+                }, 2000);
+                
+                console.log('📋 Winner address copied to clipboard:', address);
+            } catch (error) {
+                console.error('❌ Failed to copy address:', error);
+                
+                // Fallback: show address in alert
+                alert(`Winner Address:\n${address}\n\n(Address copied to your clipboard if supported)`);
+            }
+        }
+        
+        // Create success particles for copy action
+        function createCopySuccessParticles(button) {
+            const rect = button.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    createParticle(
+                        centerX + (Math.random() - 0.5) * 40,
+                        centerY + (Math.random() - 0.5) * 40,
+                        '#00ff00',
+                        Math.random() * 4 + 2,
+                        1000
+                    );
+                }, i * 100);
+            }
+        }
+
+        // Particle effects system
+        function createParticle(x, y, color, size = 4, duration = 1000) {
+            const particle = document.createElement('div');
+            particle.style.position = 'fixed';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            particle.style.background = color;
+            particle.style.borderRadius = '50%';
+            particle.style.pointerEvents = 'none';
+            particle.style.zIndex = '9999';
+            particle.style.boxShadow = `0 0 ${size * 2}px ${color}`;
+            
+            document.body.appendChild(particle);
+            
+            const animation = particle.animate([
+                { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                { transform: `translate(${(Math.random() - 0.5) * 200}px, ${-100 - Math.random() * 100}px) scale(0)`, opacity: 0 }
+            ], {
+                duration: duration,
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            });
+            
+            animation.onfinish = () => particle.remove();
+        }
+
+        function createVoteExplosion(element, color) {
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const particleColor = color === 'red' ? '#ff0000' : '#000000';
+            
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    createParticle(
+                        centerX + (Math.random() - 0.5) * rect.width,
+                        centerY + (Math.random() - 0.5) * rect.height,
+                        particleColor,
+                        Math.random() * 6 + 2,
+                        1500
+                    );
+                }, i * 50);
+            }
+        }
+
+        function createVoteParticles(element) {
+            const rect = element.getBoundingClientRect();
+            for (let i = 0; i < 8; i++) {
+                createParticle(
+                    rect.left + Math.random() * rect.width,
+                    rect.top + Math.random() * rect.height,
+                    '#ff0000',
+                    3,
+                    800
+                );
+            }
+        }
+
+        function createVerificationParticles() {
+            const button = document.querySelector('.verify-btn');
+            const rect = button.getBoundingClientRect();
+            
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    createParticle(
+                        rect.left + Math.random() * rect.width,
+                        rect.top + Math.random() * rect.height,
+                        '#ff0000',
+                        4,
+                        1200
+                    );
+                }, i * 100);
+            }
+        }
+
+        function createConnectionParticles() {
+            const status = document.getElementById('connectionStatus');
+            const rect = status.getBoundingClientRect();
+            
+            for (let i = 0; i < 10; i++) {
+                createParticle(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2,
+                    '#ff0000',
+                    3,
+                    1000
+                );
+            }
+        }
+
+        function createUpdateParticles() {
+            // Create subtle particles on game updates
+            for (let i = 0; i < 3; i++) {
+                createParticle(
+                    Math.random() * window.innerWidth,
+                    Math.random() * 100,
+                    '#ff0000',
+                    2,
+                    2000
+                );
+            }
+        }
+
+        function createUrgencyParticles() {
+            const timer = document.getElementById('timer');
+            const rect = timer.getBoundingClientRect();
+            
+            for (let i = 0; i < 5; i++) {
+                createParticle(
+                    rect.left + Math.random() * rect.width,
+                    rect.top + Math.random() * rect.height,
+                    '#ff0000',
+                    5,
+                    600
+                );
+            }
+        }
+
+        function createSpinParticles() {
+            const wheel = document.getElementById('wheel');
+            const rect = wheel.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const interval = setInterval(() => {
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * 2 * Math.PI;
+                    const radius = 150;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    createParticle(x, y, i % 2 === 0 ? '#ff0000' : '#000000', 3, 800);
+                }
+            }, 200);
+            
+            // Match server timing (3 seconds)
+            setTimeout(() => clearInterval(interval), 3000);
+        }
+
+        function createWinnerExplosion() {
+            const modal = document.getElementById('winnerModal');
+            const rect = modal.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const angle = (i / 50) * 2 * Math.PI;
+                    const radius = Math.random() * 200 + 50;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+                    
+                    createParticle(x, y, '#ff0000', Math.random() * 8 + 4, 2000);
+                }, i * 50);
+            }
+        }
+
+        // Enhanced sound system
+        function playSound(type) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                switch (type) {
+                    case 'vote':
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+                        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        break;
+                    case 'spin':
+                        oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 2);
+                        gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+                        break;
+                    case 'spinStop':
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.5);
+                        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                        break;
+                    case 'win':
+                        // Victory fanfare
+                        [600, 800, 1000, 1200].forEach((freq, i) => {
+                            setTimeout(() => {
+                                const osc = audioContext.createOscillator();
+                                const gain = audioContext.createGain();
+                                osc.connect(gain);
+                                gain.connect(audioContext.destination);
+                                osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+                                gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                                osc.start(audioContext.currentTime);
+                                osc.stop(audioContext.currentTime + 0.3);
+                            }, i * 150);
+                        });
+                        return; // Don't execute default logic
+                }
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 2);
+            } catch (error) {
+                // Sound not supported, fail silently
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                if (!document.getElementById('redButton').disabled) {
+                    vote('red');
+                }
+            } else if (e.key === 'b' || e.key === 'B') {
+                if (!document.getElementById('blackButton').disabled) {
+                    vote('black');
+                }
+            } else if (e.key === 'Enter') {
+                if (document.activeElement === document.getElementById('walletInput')) {
+                    verifyWallet();
+                }
+            }
+        });
+
+        // Mouse trail effect
+        let mouseTrail = [];
+        document.addEventListener('mousemove', (e) => {
+            mouseTrail.push({ x: e.clientX, y: e.clientY, time: Date.now() });
+            
+            // Limit trail length
+            if (mouseTrail.length > 10) {
+                mouseTrail.shift();
+            }
+            
+            // Create trail particles occasionally
+            if (Math.random() < 0.1) {
+                createParticle(e.clientX, e.clientY, '#ff0000', 2, 500);
+            }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎰 Initializing Red or Black Casino...');
+            
+            // Add loading animation
+            document.body.classList.add('loading');
+            
+            setTimeout(() => {
+                document.body.classList.remove('loading');
+                initializeConnection();
+                
+                // Auto-refresh intervals - reduced frequency to prevent timer conflicts
+                setInterval(fetchParticipants, 5000);
+                setInterval(fetchGameStatus, 5000);
+                
+                console.log('🔥 Red or Black Casino is LIVE!');
+            }, 1000);
+        });
+
+        // Performance monitoring
+        let lastUpdateTime = Date.now();
+        function checkPerformance() {
+            const now = Date.now();
+            const deltaTime = now - lastUpdateTime;
+            
+            if (deltaTime > 8000) {
+                console.warn('⚠️ Performance warning: No updates received recently');
+                updateConnectionStatus(false);
+            }
+            
+            lastUpdateTime = now;
+        }
+
+        setInterval(checkPerformance, 10000);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (socket) {
+                socket.disconnect();
+            }
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        });
+
+        // Handle visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('🔴 Page hidden - reducing updates');
+            } else {
+                console.log('🔴 Page visible - resuming full updates');
+                fetchGameStatus();
+                fetchParticipants();
+            }
+        });
+    </script>
+</body>
+</html>
