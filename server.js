@@ -11,17 +11,25 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000","http://localhost:5502"],
+    origin: ["http://localhost:5173", "http://localhost:3000","http://localhost:5502","https://redorblack.onrender.com"],
     methods: ["GET", "POST"],
   },
 });
 
 const PORT = process.env.PORT || 5500;
+// Serve static files
+app.use(express.static(path.join(__dirname, "public")));
+
+// Fallback for index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3000","http://localhost:5502"],
+    origin: ["http://localhost:5173", "http://localhost:3000","http://localhost:5502","https://redorblack.onrender.com"],
     credentials: true,
   })
 );
