@@ -30,7 +30,7 @@ app.get("/", (req, res) => {
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3000","http://localhost:5502","https://redorblack.onrender.com"."https://www.redorblack.fun"],
+    origin: ["http://localhost:5173", "http://localhost:3000","http://localhost:5502","https://redorblack.onrender.com","https://www.redorblack.fun"],
     credentials: true,
   })
 );
